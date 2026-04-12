@@ -25,6 +25,7 @@
     unit={COMS30045},
     subtitle={}]{dissertation}
 
+\usepackage{amsmath,amssymb}
 \usepackage{booktabs}
 \usepackage{graphicx}
 \usepackage{multirow}
@@ -493,13 +494,84 @@ Due to SAM~3's ability to detect the majority of apes in each video, it was poss
     \item Save each cropped region as an image, assigning an appropriate label (\texttt{chimpanzee} or \texttt{gorilla}). We will refer to these images as crops.
     \item Split into training, testing, and validation data.
 \end{enumerate}
+Below are the details of each split once the crops were generated.
+
+\begin{table}[h]
+    \centering
+
+    \begin{tabular}{l|cccc}
+        \toprule
+        \textbf{Split} & \textbf{Chimp Samples} & \textbf{Gorilla Samples} & \textbf{Total} & \textbf{Percentage} \\
+        \midrule
+        Train & 112,636 & 56,764 & 169,400 & 83\% \\
+        Test & 19,349 & 9,242 & 28,591 & 14\% \\
+        Validation & 3,244 & 2,446 & 5,690 & 3\% \\
+        \bottomrule
+    \end{tabular}
+
+    \caption[Train, Test and Validation Split Details]{Train, Test and Validation Split Details}
+    \label{tab:trainsplit}
+\end{table}
+% Total samples 203681
 
 \subsubsection{Data Augmentation}
 
-For each classification model, the same data preprocessing was used.
+For each classification model, the following transforms were applied to the training split before training the model:
+\begin{itemize}
+    \item All images were resized to a resolution of $224 \times 224$ pixels.
+    \item Images were horizontally flipped with a probability of $0.5$
+    \item All images were rotated by a randomly selected angle between $-20^\circ$ and $20^\circ$. The small angle range ensures objects are not rotated to appear at some orientation by which they would not likely appear in any raw camera trap imagery.
+\end{itemize}
+Augmenting the data in such a way aims to improve the model's generalisation, consequently increasing their accuracy on unseen data.
 
 
-\subsection{Simple CNN}
+\subsection{ApeNet (CNN trained solely with ape data)}
+
+\subsubsection{Model Architecture}
+
+Made up of four convolutional blocks followed by two full-connected layers, ApeNet is a simple CNN designed to tackle the problem at hand. Each convolutional block contains:
+\begin{itemize}
+    \item A convolutional layer, with a kernel of size $3 \times 3$ and padding of $1$ applied to each side.
+    \item Batch normalisation (Appendix~\ref{appx:dl_functions})
+    \item ReLU application (Appendix~\ref{appx:dl_functions})
+    \item Max pooling with a kernel of size $2 \times 2$
+\end{itemize}
+After the convolutional blocks, the data is flattened and passed through the final two layers, with a dropout probability of 0.5 between each layer.
+
+
+\subsection{ResNet-18 for Apes}
+
+\subsubsection{Model Architecture}
+
+Inspired by VGG nets \cite{simonyan2015deepconvolutionalnetworkslargescale}, ResNet is built on top of a plain network, being an initial convolutional layer and a further four residual building blocks \cite{he2015deepresiduallearningimage}. What turns this plain network into its residual counterpart, is the insertion of shortcut connections which aims to mitigate the degradation problem seen in deeper networks. The formal definition of a building block is:
+\begin{equation}
+    \textbf{y} = \mathcal{F}(\textbf{x}, \{W_i\}) + \textbf{x}
+\end{equation}
+where $\textbf{x}$ is the input vector, $\textbf{y}$ is the output vector, $\mathcal{F}$ denotes the residual mapping, and $\{W_i\}$ is the set of learnable parameters associated with each layer in $\mathcal{F}$. The function $\mathcal{F}$ represents the sequence of convolutional layers and nonlinear functions such as ReLU.
+
+
+\subsubsection{Fine-Tuning with Ape Data}
+
+To adapt the model to this two-way classification problem, we replace the final fully-connected layer, reducing the number of output labels from 1000 to 2. During training, all layers of the network are updated, allowing low-level and high-level features to adapt to the domain, effective with our small number of target labels and large training dataset.
+
+\subsubsection{Baseline Performance}
+
+The baseline model achieved the following performance on the test set.
+\begin{table}[h]
+    \centering
+
+    \begin{tabular}{l|c}
+        Loss & 0.66 \\
+        \midrule
+        Accuracy & 0.67 \\
+    \end{tabular}
+
+    \caption[ResNet-18 Baseline Performance]{ResNet-18 Baseline Performance}
+    \label{tab:resnetbaseline}
+\end{table}
+
+
+
 
 
 % -----------------------------------------------------------------------------
@@ -683,6 +755,35 @@ IDF1 measures the accuracy of identity preservation during tracking.
     {2 \cdot IDTP + IDFP + IDFN}
 \end{equation}
 where $IDTP$, $IDFP$ and $IDFN$ represent identity true positives, false positives and false negatives respectively. Higher values indicate more consistent identity tracking.
+
+
+\chapter{Deep Learning}
+\label{appx:deeplearning}
+
+This section provides further information on deep learning concepts.
+
+\section{Internal Functions and Methods}
+\label{appx:dl_functions}
+
+\paragraph{ReLU}
+
+ReLU is an activation function used for faster training and to reduce the vanishing gradient problem.
+\begin{equation}
+    \text{ReLU}(x) = 
+    \begin{cases}
+        0 & x \leq 0 \\
+        x & x > 0
+    \end{cases}
+\end{equation}
+
+
+\paragraph{Batch Normalisation}
+
+Batch normalisation is a technique used to dramatically accelerate training of deep networks \cite{ioffe2015batchnormalizationacceleratingdeep}.
+\begin{equation}
+    y = \frac{x - \mathbb{E}[x]}{\sqrt{\text{Var}[x]+\epsilon}} * \gamma + \beta
+\end{equation}
+where $x$ is the input, $\mathbb{E}[x]$ and $\text{Var}[x]$ are the mean and variance computed per channel, $\epsilon$ is a small constant, and $\gamma$ and $\beta$ are learnable parameters.
 
 
 % =============================================================================
