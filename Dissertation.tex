@@ -1,0 +1,726 @@
+% The document class supplies options to control rendering of some standard
+% features in the result.  The goal is for uniform style, so some attention 
+% to detail is *vital* with all fields.  Each field (i.e., text inside the
+% curly braces below, so the MEng text inside {MEng} for instance) should 
+% take into account the following:
+%
+% - author name       should be formatted as "FirstName LastName"
+%   (not "Initial LastName" for example),
+% - supervisor name   should be formatted as "Title FirstName LastName"
+%   (where Title is "Dr." or "Prof." for example),
+% - degree programme  should be "BSc", "MEng", "MSci", "MSc" or "PhD",
+% - dissertation title should be correctly capitalised (plus you can have
+%   an optional sub-title if appropriate, or leave this field blank),
+% - dissertation type should be formatted as one of the following:
+%   * for the MEng degree programme either "enterprise" or "research" to
+%     reflect the stream,
+%   * for the MSc  degree programme "$X/Y/Z$" for a project deemed to be
+%     X%, Y% and Z% of type I, II and III.
+% - year              should be formatted as a 4-digit year of submission
+%   (so 2014 rather than the academic year, say 2013/14 say).
+
+\documentclass[author={Jacob Stephenson},
+    degree={BSc},
+    title={Robust Localisation and Recognition of Great Apes in Wild Camera Trap Imagery},
+    unit={COMS30045},
+    subtitle={}]{dissertation}
+
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{multirow}
+\usepackage{subcaption}
+
+\date{5th May 2026}
+
+\begin{document}
+
+% =============================================================================
+
+% This macro creates the standard UoB title page by using information drawn
+% from the document class (meaning it is vital you select the correct degree 
+% title and so on).
+
+\maketitle
+
+% After the title page (which is a special case in that it is not numbered)
+% comes the front matter or preliminaries; this macro signals the start of
+% such content, meaning the pages are numbered with Roman numerals.
+
+\frontmatter
+
+
+%\lstlistoflistings
+
+% The following sections are part of the front matter, but are not generated
+% automatically by LaTeX; the use of \chapter* means they are not numbered.
+
+% -----------------------------------------------------------------------------
+
+\chapter*{Abstract}
+
+
+
+% -----------------------------------------------------------------------------
+
+
+\chapter*{Dedication and Acknowledgements}
+
+\begin{itemize}
+    \item I acknowledge the use of resources provided by the Isambard-AI National AI Research Resource (AIRR). Isambard-AI is operated by the University of Bristol and is funded by the UK Government’s Department for Science, Innovation and Technology (DSIT) via UK Research and Innovation; and the Science and Technology Facilities Council [ST/AIRR/I-A-I/1023]. \cite{mcintoshsmith2024isambardaileadershipclasssupercomputer}
+\end{itemize}
+
+
+
+% -----------------------------------------------------------------------------
+
+% This macro creates the standard UoB declaration; on the printed hard-copy,
+% this must be physically signed by the author in the space indicated.
+
+\makedecl
+
+
+% -----------------------------------------------------------------------------
+
+% This macro creates the AI declaration; on the printed hard-copy,
+% this must be physically signed by the author in the space indicated.
+
+\makeaidecl
+
+
+
+% -----------------------------------------------------------------------------
+
+% LaTeX automatically generates a table of contents, plus associated lists 
+% of figures and tables.  These are all compulsory parts of the dissertation.
+
+\tableofcontents
+\listoffigures
+\listoftables
+
+% -----------------------------------------------------------------------------
+
+
+
+\chapter*{Ethics Statement}
+
+
+
+
+% -----------------------------------------------------------------------------
+
+\chapter*{Summary of Changes}
+
+
+
+% -----------------------------------------------------------------------------
+
+\chapter*{Supporting Technologies}
+
+\begin{itemize}
+    \item I used Segment Anything Model 3 (SAM 3) \cite{carion2025sam3segmentconcepts} to evaluate the performance of existing localisation technology.
+    \item I used OpenCV \cite{opencv_library} for basic operations (e.g., get video width/height), and to draw bounding boxes over copies of videos for visualisation and qualitative analysis.
+    \item I used Isambard-AI Phase 2 \cite{mcintoshsmith2024isambardaileadershipclasssupercomputer} for computationally expensive operations such as segmenting large batches of videos.
+\end{itemize}
+
+
+
+% -----------------------------------------------------------------------------
+
+\chapter*{Notation and Acronyms}
+
+% \begin{quote}
+% \noindent
+% \begin{tabular}{lcl}
+% AES                 &:     & Advanced Encryption Standard                                         \\
+% DES                 &:     & Data Encryption Standard                                             \\
+%                     &\vdots&                                                                      \\
+% ${\mathcal H}( x )$ &:     & the Hamming weight of $x$                                            \\
+% ${\mathbb  F}_q$    &:     & a finite field with $q$ elements                                     \\
+% $x_i$               &:     & the $i$-th bit of some binary sequence $x$, st. $x_i \in \{ 0, 1 \}$ \\
+% \end{tabular}
+% \end{quote}
+
+\begin{quote}
+\noindent
+\begin{tabular}{lcl}
+    (m)AP & : & (mean) Average Precision \\
+    CNN & : & Convolutional Neural Network \\
+    GT & : & Ground Truth \\
+    IDF1 & : & Identification F1-score \\
+    MAT & : & Multi-Animal Tracking \\
+    MOTA & : & Multiple Object Tracking Accuracy \\
+    PCS & : & Promptable Concept Segmentation \\
+    SA-FARI & : & Segment Anything in Footage of Animals for Recognition and Identification \\
+    SAM 3 & : & Segment Anything Model 3 \\
+\end{tabular}
+\end{quote}
+
+
+
+% =============================================================================
+
+% After the front matter comes a number of chapters; under each chapter,
+% sections, subsections and even subsubsections are permissible.  The
+% pages in this part are numbered with Arabic numerals.  Note that:
+%
+% - A reference point can be marked using \label{XXX}, and then later
+%   referred to via \ref{XXX}; for example Chapter\ref{chap:context}.
+% - The chapters are presented here in one file; this can become hard
+%   to manage.  An alternative is to save the content in seprate files
+%   the use \input{XXX} to import it, which acts like the #include
+%   directive in C.
+
+\mainmatter
+
+
+\chapter{Introduction}
+\label{chap:intro}
+
+% Value
+
+\section{Motivation}
+
+Great ape population counts and habitats are in dramatic decline \cite{https://doi.org/10.1111/ddi.13358} and, according to the International Union for Conservation of Nature (IUCN), the three member species of the family (orangutans, gorillas and chimpanzees) are either endangered or critically endangered.
+
+% Put aims and objectives at end of Introduction
+
+\section{Aims}
+
+At a high-level, the project goal is to improve upon existing technologies regarding localisation and behaviour detection of great apes. To be specific, the aims are:
+\begin{enumerate}
+    \item Improve the accuracy of existing models with respect to great ape localisation, so that it is robust enough to work with challenging environments.
+\end{enumerate}
+
+% -----------------------------------------------------------------------------
+
+\chapter{Background}
+\label{chap:bg}
+
+\section{Camera Trap Monitoring of Great Apes}
+
+\subsection{PanAf20K}
+
+PanAf20K is a set of 20,000 static camera trap videos (roughly 7 million frames) featuring chimpanzees and gorillas in their natural habitats, \cite{brookes2024panaf20k, brookes2024panaf20kdataset} taken across 18 field sites in tropical Africa.
+
+PanAf20K contains a fully annotated subset of 500 videos (over 180K frames), referred to as PanAf500. These fine-grained annotations feature species classification, behavioural actions, bounding boxes and associated intra-video tracking IDs. The remainder of PanAf20K contain multi-label annotations indicating behaviours present in the video without associated apes or spacial locations.
+
+Because a subset of PanAf500 was used to train the SA-FARI model weights, the remaining 71 videos, which we shall refer to as PanAf71, were used for the initial evaluation of SAM~3 performance in Chapter~\ref{chap:execution}.
+
+\subsection{Challenges}
+
+The task of recognising great apes in the wild, despite being simple for humans, comes with a distinct set of challenges.
+
+% Need citation here about camera trap imagery
+First, all imagery used in this project (and the majority of data available) comes from camera traps, being static, motion-triggered cameras which are deployed in the wild for extended periods of time. The imagery generated by these cameras can be identified by their distinctly low quality and significant lighting variation between day and night shots, which, despite being a cost-effective method for monitoring animals in the wild, makes effective localisation difficult. Additionally, their static nature often leads to partial or full occlusion when animals move behind vegetation in the frame.
+
+The occlusion is not the only roadblock posed by the forest environments; dark features such as tree branches can often be misclassified as an ape's arm for example, particularly when lighting quality is poor and the objects are far from the camera.
+
+Finally, the videos used in this project feature chimpanzees and gorillas, who share strong visual similarity. This problem is amplified when objects are occluded, not facing the camera, or far away from it, making species-level classification non-trivial even for humans.
+
+
+\section{Obejct Detection and Segmentation in Wildlife Imagery}
+
+
+
+
+\section{Segment Anything Model 3 (SAM 3)}
+
+SAM 3 is a foundation model for Promptable Concept Segmentation (PCS) released by Meta \cite{carion2025sam3segmentconcepts}. Given a text prompt (e.g. ``chimpanzee"), SAM 3 identifies all corresponding instances in images and videos by producing bounding boxes and segmentation mask sequences (``masklets") in the spatio-temporal domain.
+
+In this project, SAM 3 was employed to obtain segmentation information from a varied set of videos containing chimpanzees and gorillas.
+
+
+\section{Datasets}
+
+\subsection{The SA-FARI Dataset}
+
+SA-FARI is the largest open-source Multi-Animal Tracking (MAT) dataset for wild animals \cite{wasmuht2025safaridatasetsegmentfootage}. It contains over 11,000 camera trap videos, each with manually verified, spatio-temporal segmentation annotations.
+
+In the context of this project, the fine-tuned model weights derived from the dataset were loaded into SAM 3 as an alternate configuration to compare species-specific performance against the out-of-the-box model weights.
+
+
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\textwidth]{ape_annotations.png}
+    \caption[PanAf20K Annotations]{Examples of annotations for PanAf20K. PanAf500 annotations (left) feature tight full-body bounding boxes, and frame-level behavioural actions assigned to each ape. PanAf20K annotations (right) provide only video-level behavioural annotations, without bounding boxes or ape assignment. \textit{Reproduced from \cite{brookes2024panaf20k}}}
+    \label{fig:annotations}
+\end{figure}
+
+
+\section{Evaluation Metrics}
+
+To characterise spatial accuracy, the F1-score and AP (Average Precision) \cite{cvalgosmetrics} were adopted. To quantify tracking performance, MOTA (Multiple Object Tracking Accuracy) and IDF1 (Identification F1-score) \cite{MOTmetrics} were adopted.
+
+
+\section{Taxonomy}
+
+Taxonomy is a branch of biology concerned with classifying organisms into groups, ensuring a standardised way to refer to species \cite{britannica_taxonomy, nhm_taxonomy}.
+
+Practically, these groups are arranged in a hierarchical ranking system. These ranks, from broadest to most specific are Domain, Kingdom, Phylum, Class, Order, Family, Genus and Species. Each step down the hierarchy represents a more specific grouping, such that species in the same genus are more closely related than those only sharing the same family.
+
+In this project, taxonomy is used a framework for prompt design. Using the different levels of abstraction, it is possible to investigate how such prompts impact model behaviour. It is hypothesised that broader terms will increase recall, while more specific terms will improve precision.
+
+
+
+% -----------------------------------------------------------------------------
+
+\chapter{Project Execution}
+\label{chap:execution}
+
+\section{Initial SAM 3 Performance Evaluation}
+\label{sec:execution_initial}
+
+To develop an initial understanding of SAM 3's strengths and weaknesses, the model was tested using both the default pretrained weights, and the fine-tuned SA-FARI weights. The 71 PanAf500 videos that were not used to train the SA-FARI weights were input into SAM 3, and three different prompts were tested: ``chimpanzee", ``gorilla", and ``ape". For each, the minimum confidence level was set to 0.1. The bounding boxes for each prediction were then evaluated against the ground truth information.
+
+When evaluating species specific prompts, the set of ground truth annotations was filtered down to contain only annotations of the corresponding species. For non-specific prompts, the entire set was evaluated against the predictions. This was done to ensure that incorrect species detections were counted as false positives.
+
+
+\begin{table}[h]
+    \centering
+    \small
+    \setlength{\tabcolsep}{4pt}
+
+    \begin{tabular}{lll|cccc|cc}
+        \toprule
+        
+        \textbf{Prompt} & \textbf{Target Class} & \textbf{Weights} & \textbf{Precision} & \textbf{Recall} & \textbf{F1} & \textbf{mAP} & \textbf{MOTA} & \textbf{IDF1} \\
+
+        \midrule
+        
+        \multirow{2}{*}{ape}
+            & \multirow{2}{*}{All}
+            & SAM 3 & 0.4179 & 0.9445 & 0.5794 & 0.7438 & -0.3870 & 0.1609 \\
+            & & SA-FARI & 0.6023 & 0.9164 & 0.7269 & 0.7729 & 0.3069 & 0.3096 \\
+
+        \midrule
+
+        \multirow{2}{*}{chimpanzee and gorilla}
+            & \multirow{2}{*}{All}
+            & SAM 3 & 0.4970 & 0.8986 & 0.6400 & 0.6835 & -0.0306 & 0.2240 \\
+            & & SA-FARI & 0.5665 & 0.8918 & 0.6929 & 0.7031 & 0.2062 & 0.2490 \\
+
+        \midrule
+
+        \multirow{2}{*}{gorilla and chimpanzee}
+            & \multirow{2}{*}{All}
+            & SAM 3 & 0.5338 & 0.9106 & 0.6730 & 0.6982 & 0.1020 & 0.2491 \\
+            & & SA-FARI & 0.5771 & 0.9269 & 0.7113 & 0.7746 & 0.2426 & 0.2753 \\
+
+        \midrule
+        
+        \multirow{2}{*}{chimpanzee}
+            & \multirow{2}{*}{Chimpanzees}
+            & SAM 3 & 0.2859 & 0.9382 & 0.4382 & 0.6428 & -1.4199 & 0.1486 \\
+            & & SA-FARI & 0.3752 & 0.9365 & 0.5358 & 0.6177 & -0.6274 & 0.2978 \\
+
+        \midrule
+
+        \multirow{2}{*}{gorilla}
+            & \multirow{2}{*}{Gorillas}
+            & SAM 3 & 0.1671 & 0.9537 & 0.2843 & 0.3027 & -3.8101 & 0.0824 \\
+            & & SA-FARI & 0.1828 & 0.9146 & 0.3047 & 0.2757 & -3.1790 & 0.0923 \\
+
+        \bottomrule
+    \end{tabular}
+
+    \caption[Initial SAM 3 Performance Evaluation]{Metrics quantifying SAM 3 performance on the same batch of videos for different text prompts and model checkpoints. `SAM 3' denotes the default pretrained weights. `SA-FARI' refers to weights fine-tuned using positive samples only. The \textbf{Target Class} column describes the subset of annotations against which predictions were evaluated: either the whole set (All), or exclusively the annotations containing a single species.}
+    \label{tab:metricsinitial}
+\end{table}
+
+The results in Table~\ref{tab:metricsinitial} demonstrate several trends. First, the SAM~3 weights typically outperform SA-FARI in recall, whereas SA-FARI consistently outperforms SAM~3 in precision. Second, the precision of species-specific predictions shown in the bottom two rows is substantially lower than the precision of species non-specific predictions. Finally, despite ``chimpanzee and gorilla" and ``gorilla and chimpanzee" being semantically equivalent statements in the English language, the prompts yield differing results.
+
+The difference in precision and recall between the two sets of weights likely reflects the behaviour of each model. SAM~3's higher recall indicates that more predictions are made, resulting in fewer missed detections and a greater number of incorrect detections. To contrast, SA-FARI produces significantly higher precision, suggesting that predictions are made more conservatively, reducing incorrect detections at the cost of increasing missed detections. Additionally, SA-FARI's higher precision was expected, as this model was specifically designed to segment animals, including chimpanzees and gorillas \cite{wasmuht2025safaridatasetsegmentfootage}.
+
+
+The difficulty in distinguishing between the two ape species across both models is also evident from the results. The species specific predictions maintain high recall, but the drastic decrease in precision indicates that many of the detections correspond to the incorrect species. This suggests that the models rely more heavily the broader ape features stronger than species specific traits. Given the visual similarity of the two species in many frames, particularly those in which the object is far from the camera, partially occluded or is facing away, the models seem to detect apes fairly reliably, but struggle to differentiate between the two. Evidently, there is significant limitation where species-level accuracy is essential, indicating that further refinement is required.
+
+Demonstrated by the prompts containing the semantically equivalent prompts containing ``and", SAM~3 is sensitive to prompt formulation. Thus, an investigation into prompt design was undertaken to determine whether it could improve detection performance.
+
+
+\section{Prompt Investigation}
+\label{sec:execution_prompt}
+
+In this section, a 20-video subset of those used in Section~\ref{sec:execution_initial}, containing 10 videos that feature only gorillas, and 10 videos that feature only chimpanzees, was adopted. For each prompt, the model was loaded with the SA-FARI weights, and predictions were made on all 20 videos. These outputs were then evaluated against the appropriate target classes.
+
+\subsection{Formulations}
+\label{subsec:prompt_formulations}
+
+A variety of prompt formulations were investigated, after the results in Table~\ref{tab:metricsinitial} demonstrated that the way prompts are worded affects output, evidenced by the varied results between semantically equivalent statements. These formulations include:
+
+\begin{itemize}
+    \item Single words (e.g. ``chimpanzee")
+    \item Inclusion of indefinite articles (e.g. ``a chimpanzee")
+    \item Negatives (e.g. ``chimpanzee and not gorilla")
+\end{itemize}
+
+\begin{table}[h]
+    \centering
+
+    \begin{tabular}{ll|cccc}
+            \toprule
+    
+            \textbf{Prompt} & \textbf{Target Class} & \textbf{Precision} & \textbf{Recall} & \textbf{F1} & \textbf{mAP} \\
+
+            \midrule
+            
+            ape & All & 0.6387 & 0.8703 & 0.7367 & 0.7063 \\
+            
+            chimpanzee & Chimpanzees & 0.2771 & 0.9277 & 0.4267 & 0.3758 \\
+            
+            gorilla & Gorillas & 0.2864 & 0.8641 & 0.4303 & 0.4216 \\
+
+            \midrule
+
+            an ape & All & 0.6274 & 0.8703 & 0.7292 & 0.6996 \\
+            
+            a chimpanzee & Chimpanzees & 0.2766 & 0.9247 & 0.4259 & 0.3762 \\
+            
+            a gorilla & Gorillas & 0.2871 & 0.8673 & 0.4315 & 0.4384 \\
+    
+            \midrule
+            
+            chimpanzee and not gorilla & Chimpanzees & 0.2802 & 0.9284 & 0.4305 & 0.3692 \\
+            
+            chimpanzee rather than gorilla & Chimpanzees & 0.2708 & 0.9247 & 0.4189 & 0.3643 \\
+
+            gorilla and not chimpanzee & Gorillas & 0.2853 & 0.8627 & 0.4288 & 0.4414 \\
+    
+            gorilla rather than chimpanzee & Gorillas & 0.2753 & 0.8613 & 0.4172 & 0.4378 \\
+            
+            \bottomrule
+    \end{tabular}
+
+    \caption[Prompt formulations]{Performance of multiple prompt formulations evaluated on the 20-video subset. Note that the performance of prompts ``ape", ``chimpanzee" and ``gorilla" differs from Table~\ref{tab:metricsinitial} because of the video set used.}
+    \label{tab:promptformulations}
+\end{table}
+
+First, a similar performance for single words can be seen in this subset compared to the set used in Section~\ref{sec:execution_initial}. Second, though including indefinite articles in prompts causes differing output, the change in performance compared to excluding them is negligible. Finally, though it was hypothesised that negatives would improve species-level precision, the majority of cases showed slightly worse precision.
+
+These findings suggest that SAM~3 is insensitive to subtle variations in prompts. While outputs are somewhat altered by wording, it proves an ineffective method for improving performance. Thus, a more structured approach based on biological taxonomy was explored.
+
+\subsection{Taxonomy}
+\label{subsec:prompt_taxonomy}
+
+Prompts were designed around all ranks of the taxonomy hierarchy for each species. Both chimpanzees and gorillas share the same rank classifications, down to the genus level, so these common ranks could be used to potentially improve recall, while uncommon ranks could be used to improve precision.
+
+\begin{table}[h]
+    \centering
+    
+    \begin{tabular}{ll|cccc}
+        \toprule
+
+        \textbf{Prompt} & \textbf{Target Class} & \textbf{Precision} & \textbf{Recall} & \textbf{F1} & \textbf{mAP} \\
+
+        \midrule
+
+        animalia & All & 0.6066 & 0.8736 & 0.7160 & 0.6871 \\
+
+        chordata & All & 0.6410 & 0.8583 & 0.7339 & 0.6815 \\
+
+        mammalia & All & 0.5781 & 0.8764 & 0.6967 & 0.6854 \\
+
+        primate & All & 0.6159 & 0.8722 & 0.7220 & 0.6958 \\
+
+        hominidae & All & 0.6407 & 0.8615 & 0.7349 & 0.6176 \\
+
+        \midrule
+
+        pan troglodytes & Chimpanzees & 0.2748 & 0.9179 & 0.4229 & 0.4071 \\
+
+        gorilla gorilla & Gorillas & 0.2859 & 0.8577 & 0.4288 & 0.4348 \\
+
+        \bottomrule
+    \end{tabular}
+
+    \caption[Taxonomy prompts]{Performance of prompts designed around species taxonomy evaluated on the 20-video subset.}
+    \label{tab:prompttaxonomy}
+\end{table}
+
+The metrics shown in Table~\ref{tab:prompttaxonomy} are fairly consistent among all higher taxonomic ranks (``animalia" through ``hominidae"). When compared with the recall seen in Table~\ref{tab:metricsinitial}, however, there is no evidence to support the claim that these general prompts improve recall. Additionally, species-level precision is almost equal to that seen in Table~\ref{tab:promptformulations}
+
+This suggests that SAM~3 does not utilise the hierarchical relationships. Instead, it seems that the model responds to general semantic associations rather than having a structured domain knowledge.
+
+Similar to the outcome of Section~\ref{subsec:prompt_formulations}, prompts designed in this way yield varying outputs, but do not offer a practical means to improve recall or species-level precision.
+
+\subsection{Behaviour}
+
+An investigation into SAM~3's response to behavioural information in prompts (e.g. ``ape sitting") was executed. Since gorillas and chimpanzees can often be identified based on their behaviours (e.g. a chimpanzee is more likely to be seen climbing a tree than a gorilla would be), it was theorised that should such prompts prove effective, an ensemble model utilising behaviours and other traits could be designed as an effective two-way species classifier.
+
+
+\begin{table}[h]
+    \centering
+    
+    \begin{tabular}{ll|cccc}
+        \toprule
+
+        \textbf{Prompt} & \textbf{Ground Truth Set} & \textbf{Precision} & \textbf{Recall} & \textbf{F1} & \textbf{mAP} \\
+
+        \midrule
+
+        ape sitting & All (sitting, sitting on back) & 0.1572 & 0.9283 & 0.2689 & 0.3318 \\
+
+        ape walking & All (walking) & 0.2854 & 0.9149 & 0.4351 & 0.3306 \\
+
+        \bottomrule
+    \end{tabular}
+
+    \caption[Behavioural prompts]{Performance of behavioural prompts on the 71 video subset.}
+    \label{tab:promptbehaviour}
+\end{table}
+
+Each prompt displayed in Table~\ref{tab:promptbehaviour} yields consistently high recall and low precision, similar to what is seen with species-specific prompts.
+
+The results indicate that SAM~3 is segmenting the subject of the prompt (``ape"), but is not distinguishing them by their actions in each video. The higher precision yielded by ``ape walking" is likely caused by the greater number of videos featuring apes walking than sitting within the subset used.
+
+
+\section{Species Classification}
+
+It is clear that SAM~3 does not effectively distinguish the two ape species in the dataset. We have also shown that prompt design is not an effective method in alleviating this issue. Thus, it is the case that an alternative must be taken in order to improve species-level classification.
+
+This section discusses two classification models: a simple CNN built from scratch and a fine-tuned ResNet model. Each model was trained using the same data.
+
+\subsection{Dataset}
+
+\subsubsection{Image Preparation}
+
+Due to SAM~3's ability to detect the majority of apes in each video, it was possible to utilise its outputs to train each model. The training setup is as follows:
+\begin{enumerate}
+    \item Prepare the PanAf500 videos for processing with SAM~3.
+    \item Generate masklets with SAM~3's highest recall configuration (shown in Table~\ref{tab:metricsinitial}): default weights, and prompt ``ape".
+    \item Verify outputs against ground truth annotations, keeping correct predictions.
+    \item Crop each frame down to the corresponding bounding boxes, zeroing out the background using the predicted masks.
+    \item Save each cropped region as an image, assigning an appropriate label (\texttt{chimpanzee} or \texttt{gorilla}). We will refer to these images as crops.
+    \item Split into training, testing, and validation data.
+\end{enumerate}
+
+\subsubsection{Data Augmentation}
+
+For each classification model, the same data preprocessing was used.
+
+
+\subsection{Simple CNN}
+
+
+% -----------------------------------------------------------------------------
+
+\chapter{Critical Evaluation}
+\label{chap:evaluation}
+
+% TABLES FOR POSTER DAY
+
+% \begin{table}[h]
+%     \centering
+
+%     \begin{tabular}{lc}
+%         \toprule
+
+%         \textbf{Prompt Type} & \textbf{Examples} \\
+
+%         \midrule
+
+%         \multirow{3}{*}{Generic}
+%             & ape \\
+%             & chimpanzee \\
+%             & gorilla \\
+
+%         \midrule
+
+%         \multirow{2}{*}{Negatives}
+%             & chimpanzee and not gorilla \\
+%             & gorilla rather than chimpanzee \\
+
+%         \midrule
+
+%         \multirow{2}{*}{Taxonomy}
+%             & mammalia \\
+%             & hominidae \\
+
+%         \midrule
+
+%         \multirow{2}{*}{Behavioural}
+%             & ape sitting \\
+%             & climbing ape \\
+
+%         \midrule
+
+%         \multirow{2}{*}{Trait-based}
+%             & silverback gorilla \\
+%             & ape with light face \\
+        
+%     \end{tabular}
+% \end{table}
+
+% -----------------------------------------------------------------------------
+
+\chapter{Conclusion}
+\label{chap:conclusion}
+
+
+
+% =============================================================================
+
+% Finally, after the main matter, the back matter is specified.  This is
+% typically populated with just the bibliography.  LaTeX deals with these
+% in one of two ways, namely
+%
+% - inline, which roughly means the author specifies entries using the 
+%   \bibitem macro and typesets them manually, or
+% - using BiBTeX, which means entries are contained in a separate file
+%   (which is essentially a databased) then inported; this is the 
+%   approach used below, with the databased being dissertation.bib.
+%
+% Either way, the each entry has a key (or identifier) which can be used
+% in the main matter to cite it, e.g., \cite{X}, \cite[Chapter 2}{Y}.
+%
+% We would recommend using BiBTeX, since it guarantees a consistent referencing style 
+% and since many sites (such as dblp) provide references in BiBTeX format. 
+% However, note that by default, BiBTeX will ignore capital letters in article titles 
+% to ensure consistency of style. This can lead to e.g. "NP-completeness" becoming
+% "np-completeness". To avoid this, make sure any capital letters you want to preserve
+% are enclosed in braces in the .bib, e.g. "{NP}-completeness".
+
+\backmatter
+
+\bibliography{dissertation}
+
+% -----------------------------------------------------------------------------
+
+% The dissertation concludes with a set of (optional) appendicies; these are 
+% the same as chapters in a sense, but once signaled as being appendicies via
+% the associated macro, LaTeX manages them appropriatly.
+
+\appendix
+
+\chapter{AI Prompts/Tools}
+\label{appx:ai}
+
+\section{ChatGPT}
+
+\begin{itemize}
+    \item Generated a Python script which would take a JSON file with bounding box data, and draw the bounding boxes over a copy of the corresponding video.
+    \item Generated a Python script which, given a list of the PanAf500 videos used in the training of SA-FARI, copies over the videos not mentioned in the list to a new folder.
+\end{itemize}
+
+
+
+\chapter{Metrics}
+\label{appx:metrics}
+
+This section defines the evaluation metrics used in Chapter~\ref{chap:execution}, including detection (Precision, Recall, F1, mAP) and tracking (MOTA, IDF1) performance.
+
+\section{Detection}
+
+\begin{table}[h]
+    \centering
+    
+    \begin{tabular}{lcc}
+        \toprule
+         & \textbf{Predicted Positive} & \textbf{Predicted Negative} \\
+        \midrule
+        \textbf{Actual Positive} & True Positive (TP) & False Negative (FN) \\
+        \textbf{Actual Negative} & False Positive (FP) & True Negative (TN) \\
+        \bottomrule
+    \end{tabular}
+    
+    \caption[Model outcomes used to evaluate detection accuracy]{Confusion matrix illustrating the outcomes used to evaluate detection accuracy.}
+\end{table}
+
+\paragraph{Precision}
+
+Precision measures the proportion of correct predicted detections.
+\begin{equation}
+    \text{Precision} = \frac{TP}{TP + FP}
+\end{equation}
+where $TP$ denotes the number of true positives, and $FP$ denotes the number of false positives. High precision indicates that the model produces few incorrect detections.
+
+
+\paragraph{Recall}
+
+Recall measures the proportion of ground truth objects that are correctly detected.
+\begin{equation}
+    \text{Recall} = \frac{TP}{TP + FN}
+\end{equation}
+where $FN$ denotes the number of false negatives. High recall indicates that few ground truth objects go undetected.
+
+
+\paragraph{F1 score}
+
+The F1 score is the harmonic mean between precision and recall.
+\begin{equation}
+    F1 =
+    \frac{2 \cdot \text{Precision} \cdot \text{Recall}}
+    {\text{Precision} + \text{Recall}}
+\end{equation}
+It provides a balanced score when both precision and recall are important.
+
+
+\paragraph{AP}
+
+Average Precision measures detection accuracy across different confidence thresholds, computed as the area under the precision-recall curve.
+
+
+
+\section{Tracking}
+
+\paragraph{MOTA}
+
+MOTA evaluates overall tracking accuracy by accounting for false positives, false negatives and identity switches.
+\begin{equation}
+    \text{MOTA} =
+    1 - \frac{FN + FP + IDSW}
+    {GT}
+\end{equation}
+where $FN$ denotes false negatives, $FP$ denotes false positives, $IDSW$ denotes the number of identity switches, and $GT$ denotes the number of ground truth objects. Higher values indicate better tracking performance.
+
+
+\paragraph{IDF1}
+
+IDF1 measures the accuracy of identity preservation during tracking.
+\begin{equation}
+    IDF1 = 
+    \frac{2 \cdot IDTP}
+    {2 \cdot IDTP + IDFP + IDFN}
+\end{equation}
+where $IDTP$, $IDFP$ and $IDFN$ represent identity true positives, false positives and false negatives respectively. Higher values indicate more consistent identity tracking.
+
+
+% =============================================================================
+
+\end{document}
+
+% \begin{table}[h]
+%     \centering
+
+%     \begin{tabular}{ll|cccc|cc}
+%         \toprule
+        
+%         \textbf{Prompt} & \textbf{Checkpoint} & \textbf{Precision} & \textbf{Recall} & \textbf{F1} & \textbf{mAP} & \textbf{MOTA} & \textbf{IDF1} \\
+        
+%         \midrule
+        
+%         \multirow{3}{*}{ape}
+%             & SAM 3 & 0.7273 & 0.7373 & 0.7323 & 0.5977 & 0.4576 & 0.2691 \\
+%             & SA-FARI & 0.7924 & 0.2678 & 0.4003 & 0.2270 & 0.1976 & 0.2004 \\
+%             & SA-FARI (negs) & 0.8772 & 0.1510 &  0.2577 & 0.1318 & 0.1299 & 0.1256 \\
+
+%         \midrule
+        
+%         \multirow{3}{*}{chimpanzee}
+%             & SAM 3 & 0.4514 & 0.8139 & 0.5808 & 0.4266 & -0.1776 & 0.2871 \\
+%             & SA-FARI & 0.7037 & 0.3602 & 0.4765 & 0.2624 & 0.2085 & 0.3263 \\
+%             & SA-FARI (negs) & 0.0000 & 0.0000 & 0.0000 & 0.0000 & 0.0000 & 0.0000 \\
+
+%         \midrule
+
+%         \multirow{3}{*}{gorilla}
+%             & SAM 3 & 0.4602 & 0.6573 & 0.5414 & 0.4680 & -0.1155 & 0.2556 \\
+%             & SA-FARI & 0.3948 & 0.3997 & 0.3972 & 0.1740 & -0.2132 & 0.2796 \\
+%             & SA-FARI (negs) & 0.4282 & 0.3251 & 0.3696 & 0.1903 & -0.1095 & 0.2408 \\
+        
+%         \bottomrule
+%     \end{tabular}
+
+%     \label{tab:findings}
+%     \caption[Performance metrics for SAM 3]{Metrics quantifying SAM 3 performance on the same batch of videos for different text prompts and model checkpoints. `SAM 3' denotes the default pretrained weights. `SA-FARI' refers to weights fine-tuned using positive samples only, where `SA-FARI (negs)' indicates fine-tuning with both positives and negatives.}
+% \end{table}
