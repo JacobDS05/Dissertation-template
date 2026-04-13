@@ -207,6 +207,13 @@ PanAf20K contains a fully annotated subset of 500 videos (over 180K frames), ref
 
 Because a subset of PanAf500 was used to train the SA-FARI model weights, the remaining 71 videos, which we shall refer to as PanAf71, were used for the initial evaluation of SAM~3 performance in Chapter~\ref{chap:execution}.
 
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\textwidth]{ape_annotations.png}
+    \caption[PanAf20K Annotations]{Examples of annotations for PanAf20K. PanAf500 annotations (left) feature tight full-body bounding boxes, and frame-level behavioural actions assigned to each ape. PanAf20K annotations (right) provide only video-level behavioural annotations, without bounding boxes or ape assignment. \textit{Reproduced from \cite{brookes2024panaf20k}}}
+    \label{fig:annotations}
+\end{figure}
+
 \subsection{Challenges}
 
 The task of recognising great apes in the wild, despite being simple for humans, comes with a distinct set of challenges.
@@ -219,7 +226,7 @@ The occlusion is not the only roadblock posed by the forest environments; dark f
 Finally, the videos used in this project feature chimpanzees and gorillas, who share strong visual similarity. This problem is amplified when objects are occluded, not facing the camera, or far away from it, making species-level classification non-trivial even for humans.
 
 
-\section{Obejct Detection and Segmentation in Wildlife Imagery}
+\section{Object Detection and Segmentation in Wildlife Imagery}
 
 
 
@@ -239,14 +246,6 @@ SA-FARI is the largest open-source Multi-Animal Tracking (MAT) dataset for wild 
 
 In the context of this project, the fine-tuned model weights derived from the dataset were loaded into SAM 3 as an alternate configuration to compare species-specific performance against the out-of-the-box model weights.
 
-
-
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=\textwidth]{ape_annotations.png}
-    \caption[PanAf20K Annotations]{Examples of annotations for PanAf20K. PanAf500 annotations (left) feature tight full-body bounding boxes, and frame-level behavioural actions assigned to each ape. PanAf20K annotations (right) provide only video-level behavioural annotations, without bounding boxes or ape assignment. \textit{Reproduced from \cite{brookes2024panaf20k}}}
-    \label{fig:annotations}
-\end{figure}
 
 
 \section{Evaluation Metrics}
@@ -472,7 +471,23 @@ An investigation into SAM~3's response to behavioural information in prompts (e.
 
 Each prompt displayed in Table~\ref{tab:promptbehaviour} yields consistently high recall and low precision, similar to what is seen with species-specific prompts.
 
-The results indicate that SAM~3 is segmenting the subject of the prompt (``ape"), but is not distinguishing them by their actions in each video. The higher precision yielded by ``ape walking" is likely caused by the greater number of videos featuring apes walking than sitting within the subset used.
+The results indicate that SAM~3 is segmenting the subject of the prompt (``ape"), but is not distinguishing them by their actions in each video. The consistent recall but the differing precision likely does not indicate that the model is better at correctly detecting apes which are walking, but suggests the model is raising nearly all the same candidates for each prompt, it's just that PanAf71 contains a higher number of frames in which apes are walking than they are sitting. In the table below, we see that the ratio between precisions comes to $\approx 1.82$ and the ratio between behaviours comes to $\approx 1.95$, further supporting the claim.
+\begin{table}[h]
+    \centering
+
+    \begin{tabular}{l|c}
+        \toprule
+        \textbf{Behaviour} & \textbf{Frame Count} \\
+        \midrule
+        Sitting (incl. on back) & 5,594 \\
+        Walking & 10,913 \\
+        \bottomrule
+    \end{tabular}
+
+    \caption[Dataset Behaviour Count Splits]{Disparity in number of samples featuring apes sitting compared with walking}
+    \label{tab:behaviourcounts}
+\end{table}
+
 
 
 \section{Species Classification}
@@ -492,7 +507,7 @@ Due to SAM~3's ability to detect the majority of apes in each video, it was poss
     \item Verify outputs against ground truth annotations, keeping correct predictions.
     \item Crop each frame down to the corresponding bounding boxes, zeroing out the background using the predicted masks.
     \item Save each cropped region as an image, assigning an appropriate label (\texttt{chimpanzee} or \texttt{gorilla}). We will refer to these images as crops.
-    \item Split into training, testing, and validation data.
+    \item Split into training, testing, and validation data. The validation and testing splits were made up of PanAf71 videos to avoid data leakage.
 \end{enumerate}
 Below are the details of each split once the crops were generated.
 
@@ -525,6 +540,30 @@ For each classification model, the following transforms were applied to the trai
 Augmenting the data in such a way aims to improve the model's generalisation, consequently increasing their accuracy on unseen data.
 
 
+
+\subsection{Training Proces}
+
+Both models were trained using the same process for the sake of comparison.
+
+\subsubsection{Setup}
+
+A cross entropy loss function was employed due to its effectiveness in binary classifiers \cite{crossentropy}. We adopt Adam optimisation \cite{kingma2017adammethodstochasticoptimization} with a learning rate of $1e-3$ and weight decay of $1e-5$, balancing how quickly the model learns and loss penalty size to prevent overfitting.
+
+Additionally, we define an early stopping condition to further prevent overfitting: take the model achieving the lowest validation loss after every epoch, terminating training if there has been no improvement for a set patience level (10 epochs).
+
+\subsubsection{Loop}
+
+The training loop can be described as follows:
+\begin{enumerate}
+    \item Prepare crops and labels
+    \item Complete a forward pass through the network
+    \item Compute the loss and backpropagate, updating parameters using gradient descent
+    \item Measure performance on the train and validation splits using loss and classification accuracy. Accuracy was computed by taking the ratio of correct versus total predictions.
+    \item Repeat until a fixed number of epochs (200) has been completed, or when the early stopping condition is met.
+\end{enumerate}
+
+
+
 \subsection{ApeNet (CNN trained solely with ape data)}
 
 \subsubsection{Model Architecture}
@@ -536,8 +575,12 @@ Made up of four convolutional blocks followed by two full-connected layers, ApeN
     \item ReLU application (Appendix~\ref{appx:dl_functions})
     \item Max pooling with a kernel of size $2 \times 2$
 \end{itemize}
-After the convolutional blocks, the data is flattened and passed through the final two layers, with a dropout probability of 0.5 between each layer.
-
+After the convolutional blocks, the data is flattened and passed through the final two layers, with a dropout probability of 0.5 between each layer. Formally, the model computes:
+\begin{equation}
+    \label{eq:apenet}
+    \textbf{x}_l = F_l(\textbf{x}_{l-1})
+\end{equation}
+where $\textbf{x}_{l-1}$ and $\textbf{x}_l$ are the input and output of the $l$-th layer respectively, and $F_l$ is a composite function consisting of the features described above.
 
 \subsection{ResNet-18 for Apes}
 
@@ -545,9 +588,12 @@ After the convolutional blocks, the data is flattened and passed through the fin
 
 Inspired by VGG nets \cite{simonyan2015deepconvolutionalnetworkslargescale}, ResNet is built on top of a plain network, being an initial convolutional layer and a further four residual building blocks \cite{he2015deepresiduallearningimage}. What turns this plain network into its residual counterpart, is the insertion of shortcut connections which aims to mitigate the degradation problem seen in deeper networks. The formal definition of a building block is:
 \begin{equation}
-    \textbf{y} = \mathcal{F}(\textbf{x}, \{W_i\}) + \textbf{x}
+    \label{eq:resnet}
+    \textbf{x}_b = \mathcal{F}_b(\textbf{x}_{b-1}, \{W_i\}) + \textbf{x}_{b-1}
 \end{equation}
-where $\textbf{x}$ is the input vector, $\textbf{y}$ is the output vector, $\mathcal{F}$ denotes the residual mapping, and $\{W_i\}$ is the set of learnable parameters associated with each layer in $\mathcal{F}$. The function $\mathcal{F}$ represents the sequence of convolutional layers and nonlinear functions such as ReLU.
+where $\textbf{x}_b$ and $\textbf{x}_{b-1}$ are the input and output of the $b$-th block respectively, $\mathcal{F}_b$ denotes the residual mapping, and $\{W_i\}$ is the set of learnable parameters associated with $\mathcal{F}_b$. The function $\mathcal{F}_b$ represents the sequence of convolutional layers and non-linear functions such as ReLU.
+
+This contrasts ApeNet (Equation~\ref{eq:apenet}); where ApeNet is a sequence of convolutional layers, ResNet can be thought of a sequence of blocks consisting of its own layers and shortcut connections.
 
 
 \subsubsection{Fine-Tuning with Ape Data}
