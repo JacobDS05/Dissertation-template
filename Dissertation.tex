@@ -177,21 +177,6 @@
 \chapter{Introduction}
 \label{chap:intro}
 
-% Value
-
-\section{Motivation}
-
-Great ape population counts and habitats are in dramatic decline \cite{https://doi.org/10.1111/ddi.13358} and, according to the International Union for Conservation of Nature (IUCN), the three member species of the family (orangutans, gorillas and chimpanzees) are either endangered or critically endangered.
-
-% Put aims and objectives at end of Introduction
-
-\section{Aims}
-
-At a high-level, the project goal is to improve upon existing technologies regarding localisation and behaviour detection of great apes. To be specific, the aims are:
-\begin{enumerate}
-    \item Improve the accuracy of existing models with respect to great ape localisation, so that it is robust enough to work with challenging environments.
-\end{enumerate}
-
 % -----------------------------------------------------------------------------
 
 \chapter{Background}
@@ -209,7 +194,7 @@ Because a subset of PanAf500 was used to train the SA-FARI model weights, the re
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=\textwidth]{ape_annotations.png}
+    \includegraphics[width=\textwidth]{images/ape_annotations.png}
     \caption[PanAf20K Annotations]{Examples of annotations for PanAf20K. PanAf500 annotations (left) feature tight full-body bounding boxes, and frame-level behavioural actions assigned to each ape. PanAf20K annotations (right) provide only video-level behavioural annotations, without bounding boxes or ape assignment. \textit{Reproduced from \cite{brookes2024panaf20k}}}
     \label{fig:annotations}
 \end{figure}
@@ -271,10 +256,29 @@ In this project, taxonomy is used a framework for prompt design. Using the diffe
 \section{Initial SAM 3 Performance Evaluation}
 \label{sec:execution_initial}
 
-To develop an initial understanding of SAM 3's strengths and weaknesses, the model was tested using both the default pretrained weights, and the fine-tuned SA-FARI weights. The 71 PanAf500 videos that were not used to train the SA-FARI weights were input into SAM 3, and three different prompts were tested: ``chimpanzee", ``gorilla", and ``ape". For each, the minimum confidence level was set to 0.1. The bounding boxes for each prediction were then evaluated against the ground truth information.
+To identify SAM~3's strength's and weaknesses, we must first develop an initial understanding of the model's success and failure points.
 
-When evaluating species specific prompts, the set of ground truth annotations was filtered down to contain only annotations of the corresponding species. For non-specific prompts, the entire set was evaluated against the predictions. This was done to ensure that incorrect species detections were counted as false positives.
+\subsection{Method}
 
+The investigation setup is as follows:
+\begin{enumerate}
+    \item Prepare each video from PanAf71 for processing.
+    \item Provide SAM~3 with a prompt (e.g. ape).
+    \item Load the model with either the default weights, or the fine-tuned SA-FARI weights
+    \item Process each video, obtaining segmentation outputs.
+    \item Evaluate model performance by comparing outputs with ground truth data, with an IoU threshold of 0.5. Note that if the prompt was species-specific (e.g. ``chimpanzee") the ground truth set was reduced to contain only the bounding boxes associated with chimpanzees.
+\end{enumerate}
+
+\begin{figure}[h]
+    \includegraphics[width=\textwidth]{images/Flowchart.png}
+    \caption[SAM~3 Evaluation Process]{Flowchart describing the SAM~3 evaluation process}
+\end{figure}
+
+% To develop an initial understanding of SAM 3's strengths and weaknesses, the model was tested using both the default pretrained weights, and the fine-tuned SA-FARI weights. The 71 PanAf500 videos that were not used to train the SA-FARI weights were input into SAM 3, and three different prompts were tested: ``chimpanzee", ``gorilla", and ``ape". For each, the minimum confidence level was set to 0.1. The bounding boxes for each prediction were then evaluated against the ground truth information.
+
+% When evaluating species specific prompts, the set of ground truth annotations was filtered down to contain only annotations of the corresponding species. For non-specific prompts, the entire set was evaluated against the predictions. This was done to ensure that incorrect species detections were counted as false positives.
+
+\subsection{Results and Discussion}
 
 \begin{table}[h]
     \centering
@@ -551,6 +555,8 @@ A cross entropy loss function was employed due to its effectiveness in binary cl
 
 Additionally, we define an early stopping condition to further prevent overfitting: take the model achieving the lowest validation loss after every epoch, terminating training if there has been no improvement for a set patience level (10 epochs).
 
+Finally, we adopt a `frame skip' parameter: this controls how many frames are skipped when preparing the dataset, aiming to reduce the data overfitting by a result of a large number of visually similar frames. For each model, the frame skip interval was set to 5.
+
 \subsubsection{Loop}
 
 The training loop can be described as follows:
@@ -582,6 +588,26 @@ After the convolutional blocks, the data is flattened and passed through the fin
 \end{equation}
 where $\textbf{x}_{l-1}$ and $\textbf{x}_l$ are the input and output of the $l$-th layer respectively, and $F_l$ is a composite function consisting of the features described above.
 
+\subsubsection{Performance}
+
+\begin{table}[h]
+    \centering
+
+    \begin{tabular}{l|c}
+        Loss & 26.95 \\
+        \midrule
+        Accuracy & 67\% \\
+    \end{tabular}
+
+    \caption[ApeNet Performance]{Performance achieved by ApeNet on the crop dataset test split.}
+    \label{tab:apenetperformance}
+\end{table}
+
+In Table~\ref{tab:apenetperformance}, we observe a loss of 26.95 and an accuracy score of 67\%. At first glance, the accuracy suggests that the model achieves a decent performance on the test dataset. To disprove this claim, we first acknowledge that the percentage accuracy is roughly equivalent to the percentage of samples associated with the label chimpanzee in the test split. Second, out of 1850 failures, 1850 were gorillas misclassified as chimps, and only 13 were chimps misclassified as gorillas, suggesting the model is heavily biased towards outputting the majority label.
+
+
+
+
 \subsection{ResNet-18 for Apes}
 
 \subsubsection{Model Architecture}
@@ -591,7 +617,7 @@ Inspired by VGG nets \cite{simonyan2015deepconvolutionalnetworkslargescale}, Res
     \label{eq:resnet}
     \textbf{x}_b = \mathcal{F}_b(\textbf{x}_{b-1}, \{W_i\}) + \textbf{x}_{b-1}
 \end{equation}
-where $\textbf{x}_b$ and $\textbf{x}_{b-1}$ are the input and output of the $b$-th block respectively, $\mathcal{F}_b$ denotes the residual mapping, and $\{W_i\}$ is the set of learnable parameters associated with $\mathcal{F}_b$. The function $\mathcal{F}_b$ represents the sequence of convolutional layers and non-linear functions such as ReLU.
+where $\textbf{x}_{b-1}$ and $\textbf{x}_b$ are the input and output of the $b$-th block respectively, $\mathcal{F}_b$ denotes the residual mapping, and $\{W_i\}$ is the set of learnable parameters associated with $\mathcal{F}_b$. The function $\mathcal{F}_b$ represents the sequence of convolutional layers and non-linear functions such as ReLU.
 
 This contrasts ApeNet (Equation~\ref{eq:apenet}); where ApeNet is a sequence of convolutional layers, ResNet can be thought of a sequence of blocks consisting of its own layers and shortcut connections.
 
@@ -600,24 +626,47 @@ This contrasts ApeNet (Equation~\ref{eq:apenet}); where ApeNet is a sequence of 
 
 To adapt the model to this two-way classification problem, we replace the final fully-connected layer, reducing the number of output labels from 1000 to 2. During training, all layers of the network are updated, allowing low-level and high-level features to adapt to the domain, effective with our small number of target labels and large training dataset.
 
-\subsubsection{Baseline Performance}
 
-The baseline model achieved the following performance on the test set.
-\begin{table}[h]
+\subsubsection{Performance}
+
+% \begin{table}[h]
+%     \centering
+
+%     \begin{minipage}{0.45\textwidth}
+%         \centering
+%         \begin{tabular}{l|c}
+%             Loss & 0.66 \\
+%             \midrule
+%             Accuracy & 67\% \\
+%         \end{tabular}
+%         \caption*{\textbf{(a)} Baseline}
+%     \end{minipage}
+%     \begin{minipage}{0.45\textwidth}
+%         \centering
+%         \begin{tabular}{l|c}
+%             Loss & 0.54 \\
+%             \midrule
+%             Accuracy & 85\% \\
+%         \end{tabular}
+%         \caption*{\textbf{(b)} Fine-Tuned}
+%     \end{minipage}
+
+%     \caption[ResNet-18 Performance]{Default ResNet-18 performance \textbf{(a)}, and fine-tuned performance \textbf{(b)} on the crop dataset test split.}
+%     \label{tab:resnetperformance}
+% \end{table}
+
+\begin{figure}[h]
     \centering
+    \includegraphics[width=0.75\textwidth]{images/resnet_performance.png}
+    \caption[ResNet-18 Performance]{Default ResNet-18 performance \textbf{(a)}, and fine-tuned performance \textbf{(b)} on the crop dataset test split.}
+    \label{fig:resnetperformance}
+\end{figure}
 
-    \begin{tabular}{l|c}
-        Loss & 0.66 \\
-        \midrule
-        Accuracy & 0.67 \\
-    \end{tabular}
+Table~\ref{fig:resnetperformance} shows a performance comparison between the default ResNet-18 model initialisation, and the performance of ResNet after fine-tuning with ape data. For the baseline performance, we see a loss of 0.66 and an accuracy of 67\%. To contrast, the fine-tuned model achieved a loss of 0.54 and an accuracy of 85\%.
 
-    \caption[ResNet-18 Baseline Performance]{ResNet-18 Baseline Performance}
-    \label{tab:resnetbaseline}
-\end{table}
+It is important to note that the baseline accuracy is roughly equivalent to the percentage of crops associated with the chimpanzee label. This could indicate that the model is biased towards choosing the majority class in the dataset. Thus, it is unlikely that the model is effective at differentiating between the two classes, rendering the accuracy misleading.
 
-
-
+The additional increase of roughly 18\% in accuracy demonstrates the effectiveness of improving pre-existing models. Though the baseline is trained on a diverse dataset with many class labels, it is not optimised to effectively predict chimpanzee versus gorilla based on their visual features. Fine-tuning alleviates this issue, allowing us to purpose build the model to our use case.
 
 
 % -----------------------------------------------------------------------------
