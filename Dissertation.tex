@@ -31,6 +31,9 @@
 \usepackage{multirow}
 \usepackage{subcaption}
 \usepackage{tikz}
+\usepackage{float}
+
+
 
 \usetikzlibrary{shapes.geometric, arrows.meta, positioning}
 
@@ -319,6 +322,14 @@ African Program, is a set of 20,000 static camera trap videos (roughly 7 million
 
 Because a subset of PanAf500 was used to train the SA-FARI model weights, the remaining 71 videos, which we shall refer to as PanAf71, were used for the initial evaluation of SAM~3 performance in Chapter~\ref{chap:execution}.
 
+\section{The SA-FARI Dataset}
+
+SA-FARI is the largest open-source Multi-Animal Tracking (MAT) dataset for wild animals \cite{wasmuht2025safaridatasetsegmentfootage}. It contains over 11,000 camera trap videos, each with manually verified, spatio-temporal segmentation annotations.
+
+This dataset was used to fine-tune SAM~3 weights; using SA-FARI weights aims to adapt the general purpose model to our camera-trap specific domain. The fine-tuned model outperforms SAM~3 on SA-FARI's own benchmarks~\cite{wasmuht2025safaridatasetsegmentfootage}, and shows improved precision at the cost of recall when used as an alternate configuration for SAM~3 in this work.
+
+A subset of PanAf500 was used to train the fine-tuned model checkpoint, motivating our usage of PanAf71, the videos which were not used in model training, for SAM~3 evaluation. In Section~\ref{sec:execution_classification}, we ensure the test and validation dataset splits only contain PanAf71 videos to avoid data leakage.
+
 
 \section{Existing Camera Trap Analysis Approaches}
 \label{sec:bg_existing}
@@ -361,13 +372,13 @@ Meta AI's SAM~3 is central to this project, but to understand its design and som
 
 \subsection{SAM}
 
-The first Segment Anything Model~\cite{kirillov2023segment} allowed users to provide an image and a `prompt', be it a point or a bounding box, and would generate a pixel accurate mask for all corresponding objects in an image. It was built using a vast dataset of 1 billion masks across 11 million images, giving it strong generalisation to objects it had never encountered.
+The first Segment Anything Model~\cite{kirillov2023segment} allowed users to provide an image and a `prompt', be it a point in an image or a bounding box, and would generate a pixel accurate mask for all corresponding objects in an image. It was trained using a vast dataset of 1 billion masks across 11 million images called SA-1B, giving it strong generalisation to objects it had never encountered.
 
 The model was limited to single images, and could not yet accept text phrases as prompts, though this functionality was being considered at the time of development.
 
 \subsection{SAM 2}
 
-SAM~2~\cite{ravi2024sam2segmentimages} extends the original model by enabling segmentation across videos. The transformer architecture allows users to request segmentation of an object as they would with SAM, and will generate segmentation mask sequences, known as `masklets', keeping object identity consistent in the temporal domain.
+SAM~2~\cite{ravi2024sam2segmentimages} extends the original model by enabling segmentation across videos. The transformer architecture allows users to request segmentation of an object as they would with SAM, and will generate segmentation mask sequences, known as `masklets', keeping object identity consistent in the temporal domain. Not only does the model build on SAM's functionality, but proves to be a more accurate option, at $6\times$ the speed. The SA-V dataset used to train this model contains 642.6K masklets between 50.9K videos.
 
 \subsection{SAM 3}
 
@@ -378,20 +389,19 @@ SAM~2~\cite{ravi2024sam2segmentimages} extends the original model by enabling se
     \label{fig:sam3}
 \end{figure}
 
-SAM~3~\cite{carion2025sam3segmentconcepts} introduces text-based prompting, newly referred to as Promptable Concept Segmentation (PCS) by the author, demonstrated in Figure~\ref{fig:sam3}. Given a prompt (e.g. ``chimpanzee") the model will localise and track objects between frames. This functions similarly to SAM~2, but instead of the user inputting where the object is, they indicate what they are looking for.
+SAM~3~\cite{carion2025sam3segmentconcepts} introduces text-based prompting, newly referred to as Promptable Concept Segmentation (PCS) by the author, demonstrated in Figure~\ref{fig:sam3}. Given a prompt (e.g. ``chimpanzee") the model will localise and track objects between frames. This functions similarly to SAM~2, but instead of the user inputting where the object is, they indicate what they are looking for. The training dataset for SAM~3 is called SA-CO is made up of over 3M media-phrase pairs, built by 207K unique phrases and 121K images and videos.
 
 This functionality is the basis for Section~\ref{sec:execution_prompt}, since prompting a vision model is a new and under explored field.
 
 
+\section{Prompting Vision-Language Models (VLMs)}
 
+Manipulating natural language prompts is a relatively new area of research, particularly for vision-language models. Radford et al.~\cite{radford2021learningtransferablevisualmodels} introduced zero-shot classification by comparing image embeddings to embeddings of natural-language class descriptions. They found that prompts starting with ``a photo of a" rather than just being a single word achieved better performance at an increase of 1.3\% on ImageNet, due to the model being trained on full sentences and not single words. This establishes the method of reformulating prompts, similar to the investigation conducted in this work.
 
-\section{The SA-FARI Dataset}
+Zhou et al.~\cite{zhou2022conditionalpromptlearningvisionlanguage} build on this by creating a model (CoOp) which can turn manually designed prompts into reformulated prompts which achieve greater performance on CLIP than intensively-tuned manual prompts. They expand on this by building CoCoOp, which improves generalisation, alleviating the main weakness of CoOp.
 
-SA-FARI is the largest open-source Multi-Animal Tracking (MAT) dataset for wild animals \cite{wasmuht2025safaridatasetsegmentfootage}. It contains over 11,000 camera trap videos, each with manually verified, spatio-temporal segmentation annotations.
+Despite the above works regarding prompt engineering for VLMs, prompting SAM~3 for segmentation specifically remains an under explored field.
 
-This dataset was used to fine-tune SAM~3 weights; using SA-FARI weights aims to adapt the general purpose model to our camera-trap specific domain. The fine-tuned model outperforms SAM~3 on SA-FARI's own benchmarks~\cite{wasmuht2025safaridatasetsegmentfootage}, and shows improved precision at the cost of recall when used as an alternate configuration for SAM~3 in this work.
-
-A subset of PanAf500 was used to train the fine-tuned model checkpoint, motivating our usage of PanAf71, the videos which were not used in model training, for SAM~3 evaluation. In Section~\ref{sec:execution_classification}, we ensure the test and validation dataset splits only contain PanAf71 videos to avoid data leakage.
 
 
 
@@ -403,7 +413,7 @@ This section defines the metrics used to evaluate SAM~3 performance in Chapter~\
 
 \subsection{Intersection over Union}
 
-In this project, SAM~3 outputs are considered correct, if they overlap with the ground truth data with an Intersection over Union (IoU) threshold of 0.5. Thus, the metrics in this section depend on the IoU. Formally, we define IoU as:
+In this project, SAM~3 outputs are considered correct, if they overlap with the ground truth data with an Intersection over Union (IoU) above a threshold of 0.5. Thus, the metrics in this section depend on the IoU. Formally, we define IoU as:
 \begin{equation}
     IoU = \frac{|B_p \cap B_{gt}|}{|B_p \cup B_{gt}|}
 \end{equation}
@@ -465,6 +475,7 @@ CNNs are a version of neural networks designed specifically for structured, grid
 In this project, we build a custom CNN with four convolutional blocks and two fully connected layers (Section~\ref{sec:apenet}).
 
 \subsection{Residual Networks}
+\label{sec:bg_resnet}
 
 Inspired by VGG nets \cite{simonyan2015deepconvolutionalnetworkslargescale}, ResNet is built on top of a plain network, being an initial convolutional layer and a further four residual building blocks \cite{he2015deepresiduallearningimage}. What turns this plain network into its residual counterpart, is the insertion of shortcut connections which aims to mitigate the degradation problem seen in deeper networks. The formal definition of a building block is:
 \begin{equation}
@@ -542,7 +553,7 @@ To identify SAM~3's strengths and weaknesses, we must first develop an initial u
 %     \item Evaluate model performance by comparing outputs with ground truth data, with an IoU threshold of 0.5. Note that if the prompt was species-specific (e.g. ``chimpanzee") the ground truth set was reduced to contain only the bounding boxes associated with chimpanzees.
 % \end{enumerate}
 
-The investigation is as follows. We prepare 5 different prompts, seen in Table~\ref{tab:metricsinitial}. These prompts are designed to be simple, either being a single word describing what we're looking for, or a combination of two separated by and. We start our initial evaluation with these prompts as they are seemingly obvious choices for prompting the model. For each prompt, the PanAf71 videos are prepared, because these are all the videos with fine-grained annotations which were not used to fine-tune SAM~3. Then, each of these videos are passed through SAM~3, which we load with either the default or SA-FARI weights, for the sake of comparison between the two. Finally, performance is evaluated by a number of detection and tracking metrics, with our prediction verification being an IoU at a threshold 0.5. This is a conventional threshold, which allows for some slightly inaccurate detections, but rejects completely false ones.
+The investigation is as follows. We prepare 5 different prompts, seen in Table~\ref{tab:metricsinitial}. These prompts are designed to be simple, either being a single word describing what we're looking for, or a combination of two separated by and. We start our initial evaluation with these prompts as they are seemingly obvious choices for prompting the model. For each prompt, the PanAf71 videos are prepared, because these are all the videos with fine-grained annotations which were not used to fine-tune SAM~3. Then, we load SAM~3 with either the default or SA-FARI weights for the sake of comparison between the two. Each video is processed, and outputs are accepted at a confidence threshold of 0.1, ensuring we accept the majority of SAM~3's segmentations to identify its behaviours. Finally, performance is evaluated by a number of detection and tracking metrics, with our prediction verification being an IoU at a threshold 0.5. This is a conventional threshold, which allows for some slightly inaccurate detections, but rejects completely false ones.
 
 \begin{figure}[h]
     \includegraphics[width=\textwidth]{images/Flowchart.png}
@@ -688,14 +699,16 @@ The results in Table~\ref{tab:metricsinitial} reveal that the model is sensitive
     \label{fig:promptformulations}
 \end{figure}
 
-First, a similar performance for single words can be seen in this subset compared to the set used in Section~\ref{sec:execution_initial}. Second, though including indefinite articles in prompts causes differing output, the change in performance compared to excluding them is negligible. Finally, though it was hypothesised that negatives would improve species-level precision, the majority of cases showed slightly worse precision.
+First, a similar performance for single words can be seen in this subset compared to the set used in Section~\ref{sec:execution_initial}. Second, though including indefinite articles in prompts causes differing output, the change in performance compared to excluding them is negligible. Finally, though it was hypothesised that negatives would improve species-level precision, each case achieved similar precision to the single word prompts.
+
+Another important note is that on this subset in which the number of chimpanzees and gorillas are equal, the precision for the corresponding species-specific prompts are also roughly equal, which could demonstrate that SAM~3 is producing roughly the same output for each.
 
 These findings suggest that SAM~3 is insensitive to subtle variations in prompts. While outputs are somewhat altered by wording, it proves an ineffective method for improving performance. Thus, a more structured approach based on biological taxonomy was explored.
 
 \subsection{Taxonomy}
 \label{subsec:prompt_taxonomy}
 
-Prompts were designed around all ranks of the taxonomy hierarchy for each species. Both chimpanzees and gorillas share the same rank classifications, down to the genus level, so these common ranks could be used to potentially improve recall, while uncommon ranks could be used to improve precision.
+Prompts were designed around all ranks of the taxonomy hierarchy for each species. Both chimpanzees and gorillas share the same rank classifications, down to the genus level, so these common ranks could be used to potentially improve recall, while uncommon ranks could be used to improve precision. This investigation was carried out to identify whether SAM~3 encodes some knowledge of biological hierarchy which could be used to our advantage.
 
 \begin{table}[h]
     \centering
@@ -833,6 +846,8 @@ Below are the details of each split once the crops were generated.
 \end{table}
 % Total samples 203681
 
+The motivation for using SAM~3 masks, verified by ground truth data instead of ground truth alone, is that the ground truth data does not feature exact masks. Thus, we are taking a novel approach of using automatically generated masklets as training data.
+
 \subsubsection{Data Augmentation}
 
 For each classification model, the following transforms were applied to the training split before training the model:
@@ -846,6 +861,7 @@ Augmenting the data in such a way aims to improve the model's generalisation, co
 
 
 \subsection{Training Process}
+\label{sec:execution_training}
 
 Both models were trained using the same process for the sake of comparison.
 
@@ -875,19 +891,28 @@ The training loop can be described as follows:
 
 \subsubsection{Model Architecture}
 
-Made up of four convolutional blocks followed by two full-connected layers, ApeNet is a simple CNN designed to tackle the problem at hand. Each convolutional block contains:
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\textwidth]{images/apenet-architecture.png}
+    \caption[ApeNet Model Architecture]{ApeNet Model Architecture}
+    \label{fig:apenetarch}
+\end{figure}
+
+Made up of four convolutional blocks followed by two full-connected layers (Figure~\ref{fig:apenetarch}), ApeNet is a simple CNN designed to tackle the problem at hand. Each convolutional block contains:
 \begin{itemize}
     \item A convolutional layer, with a kernel of size $3 \times 3$ and padding of $1$ applied to each side.
     \item Batch normalisation (Appendix~\ref{appx:dl_functions})
     \item ReLU application (Appendix~\ref{appx:dl_functions})
     \item Max pooling with a kernel of size $2 \times 2$
 \end{itemize}
-After the convolutional blocks, the data is flattened and passed through the final two layers, with a dropout probability of 0.5 between each layer. Formally, the model computes:
-\begin{equation}
-    \label{eq:apenet}
-    \textbf{x}_l = F_l(\textbf{x}_{l-1})
-\end{equation}
-where $\textbf{x}_{l-1}$ and $\textbf{x}_l$ are the input and output of the $l$-th layer respectively, and $F_l$ is a composite function consisting of the features described above.
+After the convolutional blocks, the data is flattened and passed through the final two layers, with a dropout probability of 0.5 between each layer.
+
+% Formally, the model computes:
+% \begin{equation}
+%     \label{eq:apenet}
+%     \textbf{x}_l = F_l(\textbf{x}_{l-1})
+% \end{equation}
+% where $\textbf{x}_{l-1}$ and $\textbf{x}_l$ are the input and output of the $l$-th layer respectively, and $F_l$ is a composite function consisting of the features described above.
 
 \subsubsection{Performance}
 
@@ -913,7 +938,7 @@ where $\textbf{x}_{l-1}$ and $\textbf{x}_l$ are the input and output of the $l$-
 
 In Table~\ref{tab:apenetperformance}, we observe a loss of 26.95 and an accuracy score of 67\%. At first glance, the accuracy suggests that the model achieves a decent performance on the test dataset. To disprove this claim, we first acknowledge that the percentage accuracy is roughly equivalent to the percentage of samples associated with the label chimpanzee in the test split. Second, Figure~\ref{fig:apenetcmatrix} demonstrates that out of 5,375 total predictions, only 15 of those were \texttt{gorilla}, 13 of which were incorrect.
 
-Evidently, the depth of the network does not allow for the model to effectively learn the low-level or high-level features, instead heavily itself to the majority class.
+Evidently, the depth of the network does not allow for the model to effectively learn the low-level or high-level features, instead heavily biasing itself to the majority class.
 
 
 
@@ -922,14 +947,14 @@ Evidently, the depth of the network does not allow for the model to effectively 
 
 \subsubsection{Model Architecture}
 
-Inspired by VGG nets \cite{simonyan2015deepconvolutionalnetworkslargescale}, ResNet is built on top of a plain network, being an initial convolutional layer and a further four residual building blocks \cite{he2015deepresiduallearningimage}. What turns this plain network into its residual counterpart, is the insertion of shortcut connections which aims to mitigate the degradation problem seen in deeper networks. The formal definition of a building block is:
-\begin{equation}
-    \label{eq:resnet}
-    \textbf{x}_b = \mathcal{F}_b(\textbf{x}_{b-1}, \{W_i\}) + \textbf{x}_{b-1}
-\end{equation}
-where $\textbf{x}_{b-1}$ and $\textbf{x}_b$ are the input and output of the $b$-th block respectively, $\mathcal{F}_b$ denotes the residual mapping, and $\{W_i\}$ is the set of learnable parameters associated with $\mathcal{F}_b$. The function $\mathcal{F}_b$ represents the sequence of convolutional layers and non-linear functions such as ReLU.
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\textwidth]{images/Original-ResNet-18-Architecture.png}
+    \caption[ResNet-18 Architecture]{ResNet-18 model architecture. \textit{Reproduced from~\cite{resnet18alzheimers}.}}
+    \label{fig:resnet18}
+\end{figure}
 
-This contrasts ApeNet (Equation~\ref{eq:apenet}); where ApeNet is a sequence of convolutional layers, ResNet can be thought of a sequence of blocks consisting of its own layers and shortcut connections.
+We fine tune a residual network (\S~\ref{sec:bg_resnet}) with 18 layers, shown in Figure~\ref{fig:resnet18}. This contrasts ApeNet; where ApeNet is a sequence of convolutional layers, ResNet can be thought of a sequence of blocks consisting of its own layers and shortcut connections.
 
 
 \subsubsection{Fine-Tuning with Ape Data}
@@ -941,25 +966,43 @@ To adapt the model to this two-way classification problem, we replace the final 
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.75\textwidth]{images/resnet_performance.png}
-    \caption[ResNet-18 Performance]{Default ResNet-18 performance, and fine-tuned performance on the crop dataset test split.}
-    \label{fig:resnetperformance}
+    \includegraphics[width=0.75\textwidth]{images/Loss.png}
+    \includegraphics[width=0.75\textwidth]{images/Accuracy.png}
+    \caption[ResNet-18 Training and validation Curves]{ResNet-18 Training and Validation Curves. Training stops at 19 epochs due to early stopping, with the lowest validation loss seen at epoch 9 ($\sim0.10$). Oscillating validation loss indicates overfitting}
+    \label{fig:resnetcurves}
 \end{figure}
 
-Table~\ref{fig:resnetperformance} shows a performance comparison between the default ResNet-18 model initialisation, and the performance of ResNet after fine-tuning with ape data. For the baseline performance, we see a loss of 0.66 and an accuracy of 67\%. To contrast, the fine-tuned model achieved a loss of 0.54 and an accuracy of 85\%.
+\begin{table}[h]
+    \centering
 
-It is important to note that the baseline accuracy is roughly equivalent to the percentage of crops associated with the chimpanzee label. This could indicate that the model is biased towards choosing the majority class in the dataset. Thus, it is unlikely that the model is effective at differentiating between the two classes, rendering the accuracy misleading.
+    \begin{tabular}{l|cc}
+        \textbf{Model} & \textbf{Loss} & \textbf{Accuracy} \\
+        \midrule
+        Baseline & 0.66 & 67\% \\
+        Fine-Tuned & \textbf{0.54} & \textbf{85\%} \\
+    \end{tabular}
 
-The additional increase of roughly 18\% in accuracy demonstrates the effectiveness of improving pre-existing models. Though the baseline is trained on a diverse dataset with many class labels, it is not optimised to effectively predict chimpanzee versus gorilla based on their visual features. Fine-tuning alleviates this issue, allowing us to purpose build the model to our use case.
+    \caption[ResNet-18 Performance]{Performance of the default and fine-tuned ResNet-18 models on the test set. The fine-tuned model outperforms the baseline by an accuracy increase of $\sim18$pp.}
+    \label{tab:resnetperformance}
+\end{table}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
     \centering
     \includegraphics[width=0.6\textwidth]{images/resnet_cmatrix.png}
     \caption[Fine-Tuned ResNet-18 Confusion Matrix]{Confusion matrix showing the fine-tuned ResNet-18 model outputs on the test split. Failures in red and successes in green.}
     \label{fig:resnetcmatrix}
 \end{figure}
 
+Table~\ref{tab:resnetperformance} shows a performance comparison between the default ResNet-18 model initialisation, and the performance of ResNet after fine-tuning with ape data. For the baseline performance, we see a loss of 0.66 and an accuracy of 67\%. To contrast, the fine-tuned model achieved a loss of 0.54 and an accuracy of 85\%.
+
+It is important to note that the baseline accuracy is roughly equivalent to the percentage of crops associated with the chimpanzee label. This could indicate that the model is biased towards choosing the majority class in the dataset. Thus, it is unlikely that the model is effective at differentiating between the two classes, rendering the accuracy misleading.
+
+The additional increase of roughly 18\% in accuracy demonstrates the effectiveness of fine tuning pre-existing models. Though the baseline is trained on a diverse dataset with many class labels, it is not optimised to effectively predict chimpanzee versus gorilla based on their visual features. Fine-tuning alleviates this issue, allowing us to purpose build the model to our use case.
+
+
 In Figure~\ref{fig:resnetcmatrix} we see a clear difference in the number of predictions for each class when compared with Figure~\ref{fig:apenetcmatrix}. The model output \texttt{chimpanzee} 3,586 times and \texttt{gorilla} 2,149 times. This indicates that, unlike ApeNet, the model is not just outputting the majority class for almost every crop, but has learned features of each target class, and is leveraging this information when making a decision. The vast improvement can likely be attributed to the model's architecture, with more blocks / layers allowing the model to effectively learn the low and high level features.
+
+In Figure~\ref{fig:resnetcurves}, we see that training loss decreases smoothly, from 0.32 to 0.06 over the 19 epoch window, indicating strong optimisation. On the other hand, validation loss oscillates rapidly, often with a jump as high as 0.98 between epoch 14 and 15. This pattern heavily indicates overfitting, likely due to the training data. The camera trap videos feature many similar consecutive frames, and the size of the validation set constitutes a small percentage of PanAf500 (3\%). The early stopping condition (\S~\ref{sec:execution_training}) selected the model with the lowest validation loss after 10 epochs, being the epoch 9 checkpoint.
 
 
 % -----------------------------------------------------------------------------
@@ -1043,6 +1086,11 @@ Additionally, for both models, the size of the validation set is small. It was d
 
 Many approaches could have been taken to carry out the work. This section will discuss any options that were considered, and justify their exclusion from the project.
 
+\subsection{Image Prompts}
+
+SAM~3 allows input of images as prompts, providing an alternative to short text prompts. The user can provide an image featuring the desired object, and SAM~3 will segment all instances of that object in images and videos.
+
+
 \subsection{Fine-Tune SAM 3}
 
 Instead of designing a classification head to be used on SAM~3's outputs, fine-tuning the model itself seems like a sensible option, but a number of reasons motivated the decision to use a model head. For one, attaching model heads is a design choice which allows easy replacement or removal from SAM~3. Additionally this allows segmentation and classification to be reasoned about separately: if one were to fine-tune the base model, it could be that classification is improved while segmentation is worsened, for example.
@@ -1051,7 +1099,14 @@ Though the prompt investigation makes it seem as though SAM~3 cannot differentia
 
 
 
-\section{Three-Way Classifier}
+\subsection{Three-Way Classifier}
+
+A classifier featuring three labels: \texttt{chimpanzee}, \texttt{gorilla} and \texttt{not-ape} was considered. This would have been a sensible alternative to the two-way classifier, but falls a little far from the goal. Though it is possible it could have improved end-to-end precision when integrated with SAM~3, there are a couple of inhibiting factors. First of all, is that SAM~3 produces many false positives, which would have caused further class imbalance, an already prevalent issue in the two-way model. The second, is that automatically generated training data can be unpredictable, and may provide a large dataset with little variation. Though it is true that the inputs to the two-way classifier are automatically generated, they are verified by ground truth annotations from a rich dataset.
+
+\subsection{Prompt-Based Ensemble Classifier}
+
+Before discovering that different prompts could not be used to retrieve any useful information, an ensemble classifier combining outputs from many different prompts was conceived. The idea was a probabilistic model in which the outputs yielded by each prompt acted as a model `expert', where different prompt outputs could be combined to decide on a class label. For example, you could combine many chimpanzee-based prompts such as ``slender chimpanzee", ``chimpanzee with light face" with gorilla-based prompts like ``bulky gorilla", ``gorilla with silver back", and if the chimpanzee prompts highlighted the same object more frequently than the gorilla prompts, the model would output \texttt{chimpanzee}. Of course, the exact model design was not considered, since prompt engineering proved ineffective, motivating the idea to be discarded.
+
 
 % -----------------------------------------------------------------------------
 
@@ -1064,7 +1119,7 @@ We first demonstrate that, broadly, SAM~3 is an effective ape detector, but is n
 
 We reinforced this conclusion in the prompt investigation, by demonstrating that prompt engineering could not be leveraged to yield more desirable outputs. Negatives did not sway the model to avoid a particular object, taxonomy based prompts did not improve recall or precision in any useful way, and behavioural prompts failed to invoke any behaviour-aware segmentation. Together, the results suggest that SAM~3 does not reason about prompts in some logical way, but treats prompts as points in a semantic space. Hence, it is reasonable that ``chimpanzee" and ``gorilla" lie close together in some semantic space, dominated by being apes, such that no wording could pull them apart.
 
-Motivated by the negative result produced by prompt engineering, we instead look to the conventional method of designing CNNs for classification, utilising SAM~3's masks as an under explored design choice for training. ApeNet produced poor predictive performance, having learned to predict the majority class in over 99\% of its total predictions. This was mainly due to class imbalance and small-scale model architecture. The fine-tuned ResNet-18 model improved on ApeNet's 67\% accuracy by 18pp at roughly 85\%. While this figure is not perfect, it represents improvement over usage of SAM~3 alone, and proposes that such model heads for similar tasks are a viable option when discrimination between multiple objects sharing a similar semantic space is a viable option.
+Motivated by the negative result produced by prompt engineering, we instead look to the conventional method of designing CNNs for classification, utilising SAM~3's masks as an under explored design choice for training. ApeNet produced poor predictive performance, having learned to predict the majority class in over 99\% of its total predictions. This was mainly due to class imbalance and small-scale model architecture. The fine-tuned ResNet-18 model improved on ApeNet's 67\% accuracy by 18pp at roughly 85\%. While this figure is not perfect, it represents improvement over usage of SAM~3 alone, and proposes that implementing such model heads for similar tasks are a viable option when discrimination between multiple objects sharing a similar semantic space is a requirement.
 
 \section{Contributions}
 
