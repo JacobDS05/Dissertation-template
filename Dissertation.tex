@@ -351,7 +351,7 @@ Despite high accuracy, such deep-learning based classifiers have disadvantages. 
 
 \subsection{Great Ape Detection and Recognition}
 
-The approaches above apply to any wildlife, great ape detection specifically has received special intention due to conservation concerns. A large amount of work for analysing camera trap imagery featuring great apes specifically has been and will continue to be led by the University of Bristol.
+The approaches above apply to any wildlife, great ape detection specifically has received special attention due to conservation concerns. A large amount of work for analysing camera trap imagery featuring great apes specifically has been and will continue to be led by the University of Bristol.
 
 Yang et al.~\cite{yang2019greatapedetectionchallenging} designed a great ape detector, utilising temporal information and full-body morphology to improve detections in challenging environments when compared with frame based detectors. They achieve a 91.17\% mAP on PanAf500, outperforming frame-based state-of-the-art detectors. This highlights the impact of utilising the temporal domain.
 
@@ -555,10 +555,10 @@ To identify SAM~3's strengths and weaknesses, we must first develop an initial u
 
 The investigation is as follows. We prepare 5 different prompts, seen in Table~\ref{tab:metricsinitial}. These prompts are designed to be simple, either being a single word describing what we're looking for, or a combination of two separated by and. We start our initial evaluation with these prompts as they are seemingly obvious choices for prompting the model. For each prompt, the PanAf71 videos are prepared, because these are all the videos with fine-grained annotations which were not used to fine-tune SAM~3. Then, we load SAM~3 with either the default or SA-FARI weights for the sake of comparison between the two. Each video is processed, and outputs are accepted at a confidence threshold of 0.1, ensuring we accept the majority of SAM~3's segmentations to identify its behaviours. Finally, performance is evaluated by a number of detection and tracking metrics, with our prediction verification being an IoU at a threshold 0.5. This is a conventional threshold, which allows for some slightly inaccurate detections, but rejects completely false ones.
 
-\begin{figure}[h]
-    \includegraphics[width=\textwidth]{images/Flowchart.png}
-    \caption[SAM~3 Evaluation Process]{Flowchart describing the SAM~3 evaluation process}
-\end{figure}
+% \begin{figure}[h]
+%     \includegraphics[width=\textwidth]{images/Flowchart.png}
+%     \caption[SAM~3 Evaluation Process]{Flowchart describing the SAM~3 evaluation process}
+% \end{figure}
 
 
 \subsection{Results}
@@ -614,6 +614,15 @@ The investigation is as follows. We prepare 5 different prompts, seen in Table~\
     \caption[Initial SAM 3 Performance Evaluation]{Metrics quantifying SAM 3 performance on the same batch of videos for different text prompts and model checkpoints. `SAM 3' denotes the default pretrained weights. `SA-FARI' refers to weights fine-tuned using positive samples only. The \textbf{Target Class} column describes the subset of annotations against which predictions were evaluated: either the whole set (All), or exclusively the annotations containing a single species. Bold values are the highest in their column. Underline shows the configuration resulting in the highest recall, specifically for species non-specific segmentation.}
     \label{tab:metricsinitial}
 \end{table}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.85\textwidth]{images/sam3_in_out.png}
+    \caption[SAM 3 Inputs and Outputs]{Input provided to SAM~3 (left) and the same frame with corresponding mask outputs (right) after prompt ``ape". Green interconnecting arrow indicates successful segmentations, red represents a failure case. The failure shows the central gorilla's arm identified as a separate ape, and there appears to be many small incorrect masks output in the general area of correct masks (IDs 2, 3, 4).}
+    \label{fig:sam3io}
+\end{figure}
+
+
 
 \begin{figure}[h]
     \centering
@@ -993,6 +1002,12 @@ To adapt the model to this two-way classification problem, we replace the final 
     \label{fig:resnetcmatrix}
 \end{figure}
 
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.5\textwidth]{images/classifier_failures.png}
+    \caption[ResNet Misclassification Examples]{Examples of ResNet misclassifications, some chimpanzees labelled \texttt{gorilla} and vice versa. For the sake of highlighting the difficulty of this task, we leave it to the reader to decide which images represent which misclassifications.}
+\end{figure}
+
 Table~\ref{tab:resnetperformance} shows a performance comparison between the default ResNet-18 model initialisation, and the performance of ResNet after fine-tuning with ape data. For the baseline performance, we see a loss of 0.66 and an accuracy of 67\%. To contrast, the fine-tuned model achieved a loss of 0.54 and an accuracy of 85\%.
 
 It is important to note that the baseline accuracy is roughly equivalent to the percentage of crops associated with the chimpanzee label. This could indicate that the model is biased towards choosing the majority class in the dataset. Thus, it is unlikely that the model is effective at differentiating between the two classes, rendering the accuracy misleading.
@@ -1003,6 +1018,42 @@ The additional increase of roughly 18\% in accuracy demonstrates the effectivene
 In Figure~\ref{fig:resnetcmatrix} we see a clear difference in the number of predictions for each class when compared with Figure~\ref{fig:apenetcmatrix}. The model output \texttt{chimpanzee} 3,586 times and \texttt{gorilla} 2,149 times. This indicates that, unlike ApeNet, the model is not just outputting the majority class for almost every crop, but has learned features of each target class, and is leveraging this information when making a decision. The vast improvement can likely be attributed to the model's architecture, with more blocks / layers allowing the model to effectively learn the low and high level features.
 
 In Figure~\ref{fig:resnetcurves}, we see that training loss decreases smoothly, from 0.32 to 0.06 over the 19 epoch window, indicating strong optimisation. On the other hand, validation loss oscillates rapidly, often with a jump as high as 0.98 between epoch 14 and 15. This pattern heavily indicates overfitting, likely due to the training data. The camera trap videos feature many similar consecutive frames, and the size of the validation set constitutes a small percentage of PanAf500 (3\%). The early stopping condition (\S~\ref{sec:execution_training}) selected the model with the lowest validation loss after 10 epochs, being the epoch 9 checkpoint.
+
+\section{Segmentation-Classification Result}
+
+In this section, we take the best performing classifier (fine-tuned ResNet-18) and evaluate the end-to-end performance, from SAM~3 with prompt ``ape" to species level precision.
+
+\begin{table}[h]
+    \centering
+
+    \begin{tabular}{c|ccc}
+    \textbf{Output / True} & \textbf{Chimpanzee} & \textbf{Gorilla} & \textbf{Not Ape} \\
+    \midrule
+    \texttt{chimpanzee} & 19120 & 1513 & 21724 \\
+    \texttt{gorilla} & 3473 & 10175 & 17625 \\
+    \midrule
+    \textbf{Total} & 22593 & 11688 & 39349 \\
+    \end{tabular}
+
+    \caption[End-to-End Confusion Matrix]{End-to-end confusion matrix. The two-way design combined with having to classify SAM~3's false positives causes a bottleneck in the pipeline's ability to detect accurately.}
+    \label{tab:etecmatrix}
+\end{table}
+
+\begin{table}[h]
+    \centering
+
+    \begin{tabular}{lccc}
+        \toprule
+        \textbf{Species} & \textbf{Precision} & \textbf{Recall} & \textbf{F1} \\
+        \midrule
+        Chimpanzee & 0.451 & 0.80 & 0.58 \\
+        Gorilla & 0.325 & 0.83 & 0.47 \\
+        \bottomrule
+    \end{tabular}
+
+    \caption[End-to-End Performance]{End-to-end performance. Precision shows some increase compared to SAM~3 alone. Though gorilla F1 shows decent improvement, the sacrifice in recall means chimpanzee F1 is not much better than the best F1 achieved by SAM~3 alone.}
+    \label{tab:eteperformance}
+\end{table}
 
 
 % -----------------------------------------------------------------------------
