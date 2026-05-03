@@ -68,6 +68,6 @@
     \draw[arrow] (threeway) -- (out_three);
 
     \end{tikzpicture}
-    \caption[SAM 3 + Detachable Head Pipeline]{The proposed segment-then-classify pipeline. SAM~3 produces masklets from a camera trap video given the prompt ``ape''. The masklets can be used directly for high-recall, species-agnostic detection, or routed through a detachable classifier head for species-level discrimination, with the choice of head determining the precision-recall trade-off.}
+    \caption[Segmentation-Classification Pipeline]{A proposed pipeline in which optional model heads can be used on SAM~3 outputs for specific use cases. For high recall in which per species accuracy is non essential, users would use SAM~3 alone. For cases in which a greater volume of correct detections is essential, users would use the three-way model head. For a balanced model, users could use the two-way downstream classifier.}
     \label{fig:pipeline}
 \end{figure}
