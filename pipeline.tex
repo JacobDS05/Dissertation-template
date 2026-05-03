@@ -1,0 +1,73 @@
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[
+        node distance=1.0cm,
+        every node/.style={font=\small},
+        box/.style={
+            rectangle,
+            rounded corners=2pt,
+            draw=black,
+            minimum width=3.2cm,
+            minimum height=1.0cm,
+            align=center,
+        },
+        input/.style={box, fill=gray!10},
+        sam/.style={box, fill=blue!10},
+        crop/.style={box, fill=gray!10},
+        head/.style={box, fill=orange!15, minimum width=3.4cm},
+        headbox/.style={
+            draw=orange!70,
+            dashed,
+            thick,
+            rounded corners=4pt,
+            inner sep=10pt,
+        },
+        output/.style={box, fill=green!12, minimum width=3.4cm},
+        arrow/.style={-{Stealth[length=2.5mm]}, thick},
+        label/.style={font=\footnotesize\itshape, text=black!70},
+    ]
+
+    % --- Vertical spine -----------------------------------------------------
+    \node[input]                       (video)  {Camera trap video};
+    \node[sam,   below=of video]       (sam)    {SAM~3\\\footnotesize(prompt: ``ape'')};
+    \node[crop,  below=of sam]         (masks)  {Masklets\\\footnotesize+ bounding boxes};
+
+    \draw[arrow] (video) -- (sam);
+    \draw[arrow] (sam)   -- (masks);
+
+    % --- Right-hand branch: no-head output ----------------------------------
+    \node[output, right=2.0cm of masks] (out_none) {High recall\\\footnotesize species-agnostic};
+    \draw[arrow, dashed] (masks) -- node[above]{no head} (out_none);
+
+    % --- Three heads, side-by-side, below the spine -------------------------
+    \node[head, below=1.8cm of masks]    (twoway)   {Two-Way Head\\\footnotesize ResNet-18 (2 classes)};
+    \node[head, right=0.6cm of twoway]   (threeway) {Three-Way Head\\\footnotesize ResNet-18 (3 classes)};
+
+    % If you only want two heads, delete the (oneway) line above and the
+    % matching arrows / output below. Right now I've put a placeholder in
+    % so the diagram has three heads — adjust to taste.
+
+    \node[headbox, fit=(twoway) (threeway),
+          label={[label, anchor=south]south:Detachable head (choose one)}] (headgroup) {};
+
+    % Trunk from masks down to a junction above the head group, then three
+    % branches into the tops of each head.
+    % \coordinate (junction) at (masks.south |- headgroup.north);
+    % \draw[arrow] (masks.south) -- (junction);
+    % \draw[arrow] (junction) -- (twoway.north);
+    % \draw[arrow] (junction) -| (threeway.north);
+
+    \draw[arrow] (masks.south) -- (twoway.north);
+    \draw[arrow] (masks.south) -- (threeway.north);
+
+    % --- Outputs below each head -------------------------------------------
+    \node[output, below=1.4cm of twoway]    (out_two)   {Balanced\\\footnotesize precision \& recall};
+    \node[output, below=1.4cm of threeway]  (out_three) {High precision\\\footnotesize species-specific};
+
+    \draw[arrow] (twoway)   -- (out_two);
+    \draw[arrow] (threeway) -- (out_three);
+
+    \end{tikzpicture}
+    \caption[SAM 3 + Detachable Head Pipeline]{The proposed segment-then-classify pipeline. SAM~3 produces masklets from a camera trap video given the prompt ``ape''. The masklets can be used directly for high-recall, species-agnostic detection, or routed through a detachable classifier head for species-level discrimination, with the choice of head determining the precision-recall trade-off.}
+    \label{fig:pipeline}
+\end{figure}
