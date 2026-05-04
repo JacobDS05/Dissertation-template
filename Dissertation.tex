@@ -32,6 +32,7 @@
 \usepackage{subcaption}
 \usepackage{tikz}
 \usepackage{float}
+\usepackage{placeins}
 
 
 
@@ -76,8 +77,12 @@
 
 \chapter*{Abstract}
 
-Camera trap imagery is a widely used method for monitoring wildlife in their natural habitats, but the large volumes of data produced far exceed what can be manually reviewed. Meta AI's Segment Anything Model~3 (SAM~3) is a foundation model for Promptable Concept Segmentation (PCS), offering a bridge to reduce the collection-analysis gap in this domain, but the model's suitability for great ape detection in camera trap imagery remains under explored. SAM~3's performance is characterised using videos collected by the Pan African program, default weights are compared against the camera-trap-specific SA-FARI weights, and a prompt engineering investigation into whether different prompt types can improve species-level discrimination is conducted. Downstream classifiers are then designed, trained on SAM~3's segmentation outputs, their usage is proposed as detachable model heads. SAM~3 is revealed to be an effective great ape detector, capable of achieving recall above 0.90, but cannot be relied upon to distinguish between chimpanzees and gorillas through prompting alone; the model's Perception Encoder places semantically related prompts in close regions of a shared embedding space, a limitation that prompt wording does not overcome. Multiple fine-tuned ResNet classifiers are trained on SAM~3's segmentation outputs, each with their own strengths: a two-way classifier improving precision slightly while maintaining SAM~3's high recall, and a three-way classifier greatly improving precision at the cost of recall. The pipeline made available by such classifiers offers a practical approach to fine-grained discrimination in PCS-based wildlife analysis, an approach applicable to other domains.
+Camera trap imagery is a widely used method for monitoring wildlife in their natural habitats, but the large volumes of data produced far exceed what can be manually reviewed. Meta AI's Segment Anything Model~3 (SAM~3) is a foundation model for Promptable Concept Segmentation (PCS), offering a bridge to reduce the collection-analysis gap in this domain, but the model's suitability for great ape detection in camera trap imagery remains under explored. SAM~3's performance is characterised using videos collected by the Pan African program, default weights are compared against the SA-FARI weights specific to camera traps, and a prompt engineering investigation into whether different prompt types can improve species-level discrimination is conducted. Downstream classifiers are then designed, trained on SAM~3's segmentation outputs, their usage is proposed as detachable model heads. SAM~3 is revealed to be an effective great ape detector, capable of achieving recall above 0.90, but cannot be relied upon to distinguish between chimpanzees and gorillas through prompting alone; the model's Perception Encoder places semantically related prompts in close regions of a shared embedding space, a limitation that prompt wording does not overcome. With species-specific prompts alone, SAM~3 achieves precision of only 0.29 for chimpanzees and 0.17 for gorillas. Two fine-tuned ResNet classifiers are trained on SAM~3's segmentation outputs and used as detachable heads: a two-way head raises species-level precision to 0.45 / 0.33 while preserving most of SAM~3's recall, and a three-way head, trained with an additional negative class to reject false positives, raises precision to 0.70 / 0.66 at the cost of lower recall. The pipeline made available by such classifiers offers a practical approach to fine-grained discrimination in PCS-based wildlife analysis, an approach applicable to other domains in which SAM~3 must distinguish between visually similar concepts.
 
+
+\bigskip
+
+\input{achievements}
 
 
 % -----------------------------------------------------------------------------
@@ -143,7 +148,7 @@ This project did not require ethical review, as determined by my supervisor, Til
 
 % -----------------------------------------------------------------------------
 
-\chapter*{Notation and Acronyms}
+\chapter*{Acronyms}
 
 % \begin{quote}
 % \noindent
@@ -164,6 +169,7 @@ This project did not require ethical review, as determined by my supervisor, Til
     CNN & : & Convolutional Neural Network \\
     GT & : & Ground Truth \\
     IDF1 & : & Identification F1-score \\
+    IUCN & : & International Union for Conservation of Nature \\
     MAT & : & Multi-Animal Tracking \\
     MOTA & : & Multiple Object Tracking Accuracy \\
     PCS & : & Promptable Concept Segmentation \\
@@ -200,16 +206,23 @@ This project did not require ethical review, as determined by my supervisor, Til
 
 \subsection{Great Ape Endangerment}
 
-Great apes, including chimpanzees and gorillas, are amongst the most threatened mammal groups in the world. According to the International Union for Conservation of Nature, chimpanzees are endangered, and gorillas are critically endangered. This means that gorillas are one category away from being extinct in the wild~\cite{iucn2016}.
+Great apes, including chimpanzees and gorillas, are amongst the most threatened mammal groups in the world. According to the International Union for Conservation of Nature (IUCN), chimpanzees are endangered, and gorillas are critically endangered. Figure~\ref{fig:iucn} shows that gorillas are therefore one category away from being extinct in the wild~\cite{iucn2016}.
 
 Conservation efforts depend on knowledge of where populations are and how they are changing~\cite{https://doi.org/10.1111/ddi.12005}. As such, long-term monitoring of endangered species is a necessary prerequisite for action. Direct human observation of great ape habitats is not only expensive but disruptive to the species~\cite{article}. Therefore, there is also a challenge in monitoring great apes at scale and a pace matching their ever changing populations.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.8\textwidth]{images/endangerment.jpg}
+    \caption[IUCN Red List Categories]{IUCN Red List Categories. Chimpanzees are considered endangered, and gorillas are considered critically endangered, one step away from extinction in the wild. \textit{Reproduced from~\cite{iucn_faq}.}}
+    \label{fig:iucn}
+\end{figure}
 
 \subsection{Camera Trap Imagery and The Collection-Analysis Gap}
 \label{sec:intro_camtrap}
 
 Camera trap imagery is a widely used method for observing wildlife populations in their natural habitat. These cameras can be deployed and left to record thousands of videos, reducing the need for conventional direct human observation methods to collect data on animal presence and behaviours~\cite{Tuia_2022}. The Pan~African program are using this technique across 18 field sites in Africa to capture videos of great apes, particularly chimpanzees and gorillas~\cite{brookes2024panaf20k}.
 
-The large amount of data generated by such projects unfortunately far exceeds what could be manually reviewed by humans; one camera alone can generate thousands of videos, some of which contain no animals at all~\cite{beery2019efficientpipelinecameratrap}. Evidently, there is a gap between data collection and analysis, which must be bridged by automated analysis methods.
+The large amount of data generated by such projects far exceeds what could be manually reviewed by humans; one camera alone can generate thousands of videos, some of which contain no animals at all~\cite{beery2019efficientpipelinecameratrap}. Evidently, there is a gap between data collection and analysis, which must be bridged by automated analysis methods.
 
 
 \subsection{The Automation Bridge}
@@ -310,7 +323,7 @@ Meta AI's SAM~3 is central to this project, but to understand its design and som
 
 \subsection{SAM}
 
-The first Segment Anything Model~\cite{kirillov2023segment} allowed users to provide an image and a `prompt', be it a point in an image or a bounding box, and would generate a pixel accurate mask for all corresponding objects in an image. It was trained using a vast dataset of 1 billion masks across 11 million images called SA-1B, giving it strong generalisation to objects it had never encountered.
+The first Segment Anything Model~\cite{kirillov2023segment} allowed users to provide an image and a `prompt', be it a point in an image or a bounding box, and would generate a pixel accurate mask for all corresponding objects in the image. It was trained using a vast dataset of 1 billion masks across 11 million images called SA-1B, giving it strong generalisation to objects it had never encountered.
 
 The model was limited to single images, and could not yet accept text phrases as prompts, though this functionality was being considered at the time of development.
 
@@ -322,14 +335,19 @@ SAM~2~\cite{ravi2024sam2segmentimages} extends the original model by enabling se
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.9\textwidth]{images/sam3.png}
+    \includegraphics[width=0.8\textwidth]{images/sam3.png}
     \caption[SAM 3 Usage Examples]{Examples highlighting SAM~3's usage of PCS, allowing users to segment all instances of an object specified by a short text prompt. \textit{Reproduced from \cite{carion2025sam3segmentconcepts}.}}
     \label{fig:sam3}
 \end{figure}
 
-SAM~3~\cite{carion2025sam3segmentconcepts} introduces text-based prompting, newly referred to as Promptable Concept Segmentation (PCS) by the author, demonstrated in Figure~\ref{fig:sam3}. Given a prompt (e.g. ``chimpanzee") the model will localise and track objects between frames. This functions similarly to SAM~2, but instead of the user inputting where the object is, they indicate what they are looking for. The training dataset for SAM~3 known as SA-CO is made up of over 3M media-phrase pairs, built by 207K unique phrases and 121K images and videos.
+SAM~3~\cite{carion2025sam3segmentconcepts} introduces text-based prompting, newly referred to as Promptable Concept Segmentation (PCS) by the author, demonstrated in Figure~\ref{fig:sam3}. Given a prompt (e.g. ``chimpanzee") the model will localise and track objects between frames. This functions similarly to SAM~2, but instead of the user inputting where the object is, they indicate what they are looking for. The training dataset for SAM~3 known as SA-CO is made up of over 3M media-phrase pairs, built by 207K unique phrases and 121K images and videos. This functionality is the basis for Section~\ref{sec:execution_prompt}, since prompting a vision model is a new and under explored field.
 
-This functionality is the basis for Section~\ref{sec:execution_prompt}, since prompting a vision model is a new and under explored field.
+SAM~3 consists of three main components. A Perception Encoder (PE)~\cite{bolya2025perceptionencoderbestvisual} encodes the text prompt into a fixed-dimensional embedding, sharing a semantic space with the model's vision encoder. A detector produces a set of concept-conditioned mask proposals on each frame using these embeddings, and a tracker, inherited and adapted from SAM~2, links these masks across frames to produce mask sequences with consistent object identity. Rather than functioning as an exact lookup table, the PE places semantically related phrases close together in its embedding space, allowing the model to generalise across related concepts. This design choice has direct consequences for species-level discrimination, examined in Section~\ref{sec:execution_prompt} and~\ref{chap:evaluation}.
+
+A central feature of SAM~3 is its temporal domain handling, carried over from SAM~2. The model does not produce per-frame predictions, but `masklets', which are pixel-accurate mask sequences associated with consistent object identity between frames. As such, each object will retain the same identity between frames, even after becoming partially occluded or temporarily leaving the frame (if the model works as intended).
+
+
+There are a number of reasons SAM~3 is used for this project. First, the text-promptable system removes the necessity for per-task training data. Second, the PCS functionality provided by SAM~3 solves the problem of finding all instances of a given object in a video, in exact correspondence with the camera trap analysis problem. Finally, the model's ability to track across the spatial and temporal domain makes SAM~3 the perfect model for the nature of the video-based PanAf data.
 
 
 \section{Prompting Vision-Language Models (VLMs)}
@@ -344,15 +362,15 @@ Despite the above works regarding prompt engineering for VLMs, prompting SAM~3 f
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.9\textwidth]{images/panaf.png}
-    \caption[PanAf20K Camera Trap Imagery]{Example screenshots from the PanAf20K dataset. \textit{Reproduced from~\cite{brookes2024panaf20k}}.}
+    \includegraphics[width=0.8\textwidth]{images/panaf.png}
+    \caption[PanAf20K Camera Trap Imagery]{Example screenshots from the PanAf20K dataset. This array shows variety in lighting, species and behavioural actions. \textit{Reproduced from~\cite{brookes2024panaf20k}}.}
     \label{fig:panaf}
 \end{figure}
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=\textwidth]{images/ape_annotations.png}
-    \caption[PanAf20K Annotations]{Examples of annotations for PanAf20K. PanAf500 annotations (left) feature tight full-body bounding boxes, and frame-level behavioural actions assigned to each ape. PanAf20K annotations (right) provide only video-level behavioural annotations, without bounding boxes or ape assignment. \textit{Reproduced from \cite{brookes2024panaf20k}}}
+    \includegraphics[width=0.8\textwidth]{images/ape_annotations.png}
+    \caption[PanAf20K Annotations]{Examples of annotations for PanAf20K. PanAf500 annotations (left) feature tight full-body bounding boxes, and frame-level behavioural actions assigned to each ape. PanAf20K annotations (right) provide only video-level behavioural annotations, without bounding boxes or ape assignment. \textit{Reproduced from \cite{brookes2024panaf20k}.}}
     \label{fig:annotations}
 \end{figure}
 
@@ -619,14 +637,13 @@ The investigation is as follows. We prepare 5 different prompts, seen in Table~\
     \label{tab:metricsinitial}
 \end{table}
 
+
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.85\textwidth]{images/sam3_in_out.png}
+    \includegraphics[width=0.8\textwidth]{images/sam3_in_out.png}
     \caption[SAM 3 Inputs and Outputs]{Input provided to SAM~3 (left) and the same frame with corresponding mask outputs (right) after prompt ``ape". Green interconnecting arrow indicates successful segmentations, red represents a failure case. The failure shows the central gorilla's arm identified as a separate ape, and there appears to be many small incorrect masks output in the general area of correct masks (IDs 2, 3 and 4).}
     \label{fig:sam3io}
 \end{figure}
-
-
 
 \begin{figure}[h]
     \centering
@@ -701,14 +718,14 @@ The results in Table~\ref{tab:metricsinitial} and Figure~\ref{fig:promptformulat
             \bottomrule
     \end{tabular}
 
-    \caption[Prompt formulations]{Performance of multiple prompt formulations evaluated on the 20-video subset. Note that the performance of prompts ``ape", ``chimpanzee" and ``gorilla" differs from Table~\ref{tab:metricsinitial} because of the video set used.}
+    \caption[Prompt formulations]{Performance of multiple prompt formulations evaluated on the 20-video subset. No variations in formulation show a clear advantage over another. Note that the performance of prompts ``ape", ``chimpanzee" and ``gorilla" differs from Table~\ref{tab:metricsinitial} because of the video set used.}
     \label{tab:promptformulations}
 \end{table}
 
 \begin{figure}[h]
     \centering
     \includegraphics[width=0.75\textwidth]{images/formulations.png}
-    \caption[Precision and Recall for Prompt Reformulations]{Bar chart visualising the difference in precision and recall for prompt reformulations.}
+    \caption[Precision and Recall for Prompt Reformulations]{Bar chart visualising the difference in precision and recall for prompt reformulations. This highlights the disparity in precision between species specific and non-specific detections, and shows the rough equivalence between recall scores across prompts.}
     \label{fig:promptformulations}
 \end{figure}
 
@@ -720,8 +737,6 @@ These findings suggest that SAM~3 is insensitive to subtle variations in prompts
 
 \subsection{Taxonomy}
 \label{subsec:prompt_taxonomy}
-
-Prompts were designed around all ranks of the taxonomy hierarchy for each species. Both chimpanzees and gorillas share the same rank classifications, down to the genus level, so these common ranks could be used to potentially improve recall, while uncommon ranks could be used to improve precision. This investigation was carried out to identify whether SAM~3 encodes some knowledge of biological hierarchy which could be used to our advantage.
 
 \begin{table}[h]
     \centering
@@ -752,16 +767,19 @@ Prompts were designed around all ranks of the taxonomy hierarchy for each specie
         \bottomrule
     \end{tabular}
 
-    \caption[Taxonomy prompts]{Performance of prompts designed around species taxonomy evaluated on the 20-video subset.}
+    \caption[Taxonomy prompts]{Performance of prompts designed around species taxonomy evaluated on the 20-video subset. Taxonomic prompting provides no clear path to improved performance.}
     \label{tab:prompttaxonomy}
 \end{table}
 
 \begin{figure}[h]
     \centering
     \includegraphics[width=0.75\textwidth]{images/taxonomy.png}
-    \caption[Precision and Recall for Taxonomic Prompts]{Bar chart visualising the difference in precision and recall for taxonomic prompts}
+    \caption[Precision and Recall for Taxonomic Prompts]{Bar chart visualising the difference in precision and recall for taxonomic prompts. Recall is roughly equal across prompts, with species-level precision sharply decreasing compared to species-agnostic precision.}
     \label{fig:prompttaxonomy}
 \end{figure}
+
+Prompts were designed around all ranks of the taxonomy hierarchy for each species. Both chimpanzees and gorillas share the same rank classifications, down to the genus level, so these common ranks could be used to potentially improve recall, while uncommon ranks could be used to improve precision. This investigation was carried out to identify whether SAM~3 encodes some knowledge of biological hierarchy which could be used to our advantage.
+
 
 The metrics shown in Table~\ref{tab:prompttaxonomy} and Figure~\ref{fig:prompttaxonomy} are fairly consistent among all higher taxonomic ranks (``animalia" through ``hominidae"). When compared with the recall seen in Table~\ref{tab:metricsinitial}, however, there is no evidence to support the claim that these general prompts improve recall. Additionally, species-level precision is almost equal to that seen in Table~\ref{tab:promptformulations}
 
@@ -772,7 +790,7 @@ Similar to the outcome of Section~\ref{subsec:prompt_formulations}, prompts desi
 \subsection{Behaviour}
 \label{sec:prompt_behaviour}
 
-\begin{table}[h]
+\begin{table}[H]
     \centering
 
     \begin{tabular}{l|c}
@@ -784,14 +802,11 @@ Similar to the outcome of Section~\ref{subsec:prompt_formulations}, prompts desi
         \bottomrule
     \end{tabular}
 
-    \caption[Dataset Behaviour Count Splits]{Disparity in number of samples featuring apes sitting compared with walking}
+    \caption[Dataset Behaviour Count Splits]{Disparity in number of samples featuring apes sitting compared with walking.}
     \label{tab:behaviourcounts}
 \end{table}
 
-An investigation into SAM~3's response to behavioural information in prompts (e.g. ``ape sitting") was executed. Since gorillas and chimpanzees can often be identified based on their behaviours (e.g. a chimpanzee is more likely to be seen climbing a tree than a gorilla would be), it was theorised that should such prompts prove effective, an ensemble model utilising behaviours and other traits could be designed as an effective two-way species classifier.
-
-
-\begin{table}[h]
+\begin{table}[H]
     \centering
     
     \begin{tabular}{ll|cccc}
@@ -808,9 +823,12 @@ An investigation into SAM~3's response to behavioural information in prompts (e.
         \bottomrule
     \end{tabular}
 
-    \caption[Behavioural prompts]{Performance of behavioural prompts on the 71 video subset.}
+    \caption[Behavioural prompts]{Performance of behavioural prompts PanAf71. SAM~3 achieves high recall and low behaviour-accurate precision.}
     \label{tab:promptbehaviour}
 \end{table}
+
+An investigation into SAM~3's response to behavioural information in prompts (e.g. ``ape sitting") was executed. Since gorillas and chimpanzees can often be identified based on their behaviours (e.g. a chimpanzee is more likely to be seen climbing a tree than a gorilla would be), it was theorised that should such prompts prove effective, an ensemble model utilising behaviours and other traits could be designed as an effective two-way species classifier.
+
 
 
 
@@ -853,7 +871,7 @@ Below are the details of each split once the crops were generated.
         \bottomrule
     \end{tabular}
 
-    \caption[Train, Test and Validation Split Details]{Train, Test and Validation Split Details}
+    \caption[Train, Test and Validation Split Details]{Train, Test and Validation Split Details. The test and validation set sizes were limited by the restraint of having to use data not used in SAM~3 training.}
     \label{tab:trainsplit}
 \end{table}
 % Total samples 203681
@@ -905,8 +923,8 @@ The training loop can be described as follows:
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=\textwidth]{images/apenet-architecture.png}
-    \caption[ApeNet Model Architecture]{ApeNet Model Architecture}
+    \includegraphics[width=0.8\textwidth]{images/apenet-architecture.png}
+    \caption[ApeNet Model Architecture]{ApeNet model architecture. Four convolutional blocks progressively downsample the spatial dimensions ($224 \to 28$) while increasing channel depth ($32 \to 256$), before two fully-connected layers produce a binary output. The shallow depth is one factor in the model's tendency to collapse to majority-class prediction}
     \label{fig:apenetarch}
 \end{figure}
 
@@ -928,17 +946,19 @@ After the convolutional blocks, the data is flattened and passed through the fin
 
 \subsubsection{Performance}
 
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.6\textwidth]{images/confape.png}
+    \caption[ApeNet Confusion Matrix]{Confusion matrix showing ApeNet model outputs on the test split. Failures in red and successes in green. The model functions no better than a majority class identifier.}
+    \label{fig:apenetcmatrix}
+\end{figure}
+
 
 In Figure~\ref{fig:apenetcmatrix}, we observe an accuracy score of 67\%. At first glance, the accuracy suggests that the model achieves a decent performance on the test dataset. To disprove this claim, we look to Figure~\ref{fig:apenetcmatrix} which demonstrates that out of 5,375 total predictions, only 15 of those were \texttt{gorilla}, 13 of which were incorrect.
 
 Evidently, the model is not effectively learning ape features, but is heavily biasing itself towards predicting the majority class.
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.6\textwidth]{images/confape.png}
-    \caption[ApeNet Confusion Matrix]{Confusion matrix showing ApeNet model outputs on the test split. Failures in red and successes in green.}
-    \label{fig:apenetcmatrix}
-\end{figure}
+
 
 
 
@@ -968,7 +988,7 @@ To adapt the model to this two-way classification problem, we replace the final 
     \centering
     \includegraphics[width=0.49\textwidth]{images/Loss.png}
     \includegraphics[width=0.49\textwidth]{images/Accuracy.png}
-    \caption[ResNet-18 Training and validation Curves]{ResNet-18 Training and Validation Curves. Training stops at 19 epochs due to early stopping, with the lowest validation loss seen at epoch 9 ($\sim0.10$). Oscillating validation loss indicates overfitting}
+    \caption[ResNet-18 Training and validation Curves]{ResNet-18 Training and Validation Curves. Training stops at 19 epochs due to early stopping, with the lowest validation loss seen at epoch 9 ($\sim0.10$). Oscillating validation loss indicates overfitting.}
     \label{fig:resnetcurves}
 \end{figure}
 
@@ -989,13 +1009,13 @@ To adapt the model to this two-way classification problem, we replace the final 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.6\textwidth]{images/conf2.png}
-    \caption[Fine-Tuned ResNet-18 Confusion Matrix]{Confusion matrix showing the fine-tuned ResNet-18 model outputs on the test split. Failures in red and successes in green.}
+    \caption[Fine-Tuned ResNet-18 Confusion Matrix]{Confusion matrix showing the fine-tuned ResNet-18 model outputs on the test split. Failures in red and successes in green. The model improves on its default and ApeNet, with much greater overall accuracy ($\sim18$pp).}
     \label{fig:resnetcmatrix}
 \end{figure}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.5\textwidth]{images/classifier_failures.png}
+    \includegraphics[width=0.6\textwidth]{images/classifier_failures.png}
     \caption[ResNet Misclassification Examples]{Examples of ResNet misclassifications, some chimpanzees labelled \texttt{gorilla} and vice versa. For the sake of highlighting the difficulty of this task, we leave it to the reader to decide which images represent which misclassifications.}
     \label{fig:resnet2failures}
 \end{figure}
@@ -1007,7 +1027,7 @@ It is important to note that the baseline accuracy is roughly equivalent to the 
 The additional increase of roughly 18\% in accuracy demonstrates the effectiveness of fine tuning pre-existing models. Though the baseline is trained on a diverse dataset with many class labels, it is not optimised to effectively predict chimpanzee versus gorilla based on their visual features. Fine-tuning alleviates this issue, allowing us to purpose build the model to our use case.
 
 
-In Figure~\ref{fig:resnetcmatrix} we see a clear difference in the number of predictions for each class when compared with Figure~\ref{fig:apenetcmatrix}. The model output \texttt{chimpanzee} 17,937 times and \texttt{gorilla} 10,654 times. This indicates that, unlike ApeNet, the model is not just outputting the majority class for almost every crop, but has learned features of each target class, and is leveraging this information when making a decision. The vast improvement can likely be attributed to the model's architecture, with more blocks / layers allowing the model to effectively learn the low and high level features.
+In Figure~\ref{fig:resnetcmatrix} we see a clear difference in the number of predictions for each class when compared with Figure~\ref{fig:apenetcmatrix}. The model output \texttt{chimpanzee} 17,937 times and \texttt{gorilla} 10,654 times. This indicates that, unlike ApeNet, the model is not just outputting the majority class for almost every crop, but has learned features of each target class, and is leveraging this information producing a prediction. The vast improvement can likely be attributed to the model's architecture, with more blocks / layers allowing the model to effectively learn the low and high level features.
 
 In Figure~\ref{fig:resnetcurves}, we see that training loss decreases smoothly, from 0.32 to 0.06 over the 19 epoch window, indicating strong optimisation. On the other hand, validation loss oscillates rapidly, with a jump as high as 0.98 between epoch 14 and 15. This pattern heavily indicates overfitting, likely due to the training data. The camera trap videos feature many similar consecutive frames, and the size of the validation set constitutes a small percentage of PanAf500 (3\%). The early stopping condition (\S~\ref{sec:execution_training}) selected the model with the lowest validation loss after 10 epochs, being the epoch 9 checkpoint.
 
@@ -1078,7 +1098,7 @@ Motivated by the nature of the two-way downstream classifier being forced into m
 
 To generate the dataset we follow the same process as in Section~\ref{sec:execution_classification2}, but instead of discarding false positives, we keep them with an associated \texttt{not-ape} label.
 
-The model architecture training and process are almost identical to Section~\ref{sec:execution_training}, with two major differences. For one, the final layer has 3 possible output labels: \texttt{chimpanzee}, \texttt{gorilla} and \texttt{not-ape}. The other, is that due to greater class imbalance, we use a weighted cross-entropy loss function, unlike the unweighted version used in Section~\ref{sec:execution_classification2}. The weights represent inverse frequency (Table~\ref{tab:threewaycounts}).
+The model architecture and training process are almost identical to Section~\ref{sec:execution_training}, with two major differences. For one, the final layer has 3 possible output labels: \texttt{chimpanzee}, \texttt{gorilla} and \texttt{not-ape}. The other, is that due to greater class imbalance, we use a weighted cross-entropy loss function, unlike the unweighted version used in Section~\ref{sec:execution_classification2}. The weights represent inverse frequency (Table~\ref{tab:threewaycounts}).
 
 \begin{table}[h]
     \centering
@@ -1093,17 +1113,17 @@ The model architecture training and process are almost identical to Section~\ref
         \bottomrule
     \end{tabular}
 
-    \caption[Three-Way Classification Weight Initialisation]{Sample counts and inverse weights initialised in training the three way classifier. The false positives produce a large imbalance in sample counts, explaining it's low weighting, compared to the class with the smalles sample count: \texttt{gorilla}.}
+    \caption[Three-Way Classification Weight Initialisation]{Sample counts and inverse weights initialised in training the three way classifier. The false positives produce a large imbalance in sample counts, explaining its low weighting, compared to the class with the smallest sample count: \texttt{gorilla}.}
     \label{tab:threewaycounts}
 \end{table}
 
 
 \subsection{Model Performance}
 
-\begin{figure}[H]
+\begin{figure}[h]
     \centering
-    \includegraphics[width=0.75\textwidth]{images/conf3.png}
-    \caption[Three-Way Classifier Confusion Matrix]{Confusion matrix demonstrating the three-way classifier's final output on the test set.}
+    \includegraphics[width=0.6\textwidth]{images/conf3.png}
+    \caption[Three-Way Classifier Confusion Matrix]{Confusion matrix demonstrating the three-way classifier's final output on the test set. Some species-level accuracy is sacrificed at the cost of capability to identify a third class.}
     \label{fig:conf3}
 \end{figure}
 
@@ -1117,7 +1137,7 @@ The model architecture training and process are almost identical to Section~\ref
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.76\textwidth]{images/failures3.png}
+    \includegraphics[width=0.6\textwidth]{images/failures3.png}
     \caption[Three-Way Failures]{Examples of the three-way model classifying apes as \texttt{not-ape}. Examples show apes which are far from the camera, cut off by the camera's field of view or not perfectly represented by the mask.}
     \label{fig:failures3}
 \end{figure}
@@ -1170,11 +1190,11 @@ Table~\ref{tab:eteperformance3} demonstrates that the three-way downstream class
         \bottomrule        
     \end{tabular}
 
-    \caption[Model Comparison]{Model comparison table. Prompts represent SAM~3 output configured with default weights and the corresponding prompt. ``$p$" + $m$ $l$ represents applying model $m$ to SAM~3's outputs configured with $p$, and taking the performance for the corresponding label $l$. Base SAM~3 excels at recall, with downstream classifiers offering improvements in precision, or a more balanced approach in which precision is improved while better maintaining recall.}
+    \caption[Model Comparison]{Model comparison table. Prompts represent SAM~3 output configured with default weights and the corresponding prompt. ``$p$" + $m$ $l$ represents applying model $m$ to SAM~3's outputs prompted with text prompt $p$, and taking the performance for the corresponding label $l$. Base SAM~3 excels at recall, with downstream classifiers offering improvements in precision, or a more balanced approach in which precision is improved while better maintaining recall.}
     \label{tab:modelcomp}
 \end{table}
 
-Table~\ref{tab:modelcomp} summarises each model's end-to-end performance, focusing on species-level detections. First, SAM~3 used alone achieves excellent recall at 0.94 and 0.95, far exceeding any recall achieved by the other models. The two-way downstream classifier can be utilised with prompt ``ape" to achieve a more balanced score, sacrificing some recall for improved precision. The three-way classifier achieves a much higher precision than the base model, at increases of 0.41 and 0.49 for chimps and gorillas respectively.
+Table~\ref{tab:modelcomp} summarises each model's end-to-end performance, focusing on species-level detections. First, SAM~3 used alone achieves excellent recall at 0.94 and 0.95, far exceeding any recall achieved by the other models. The two-way downstream classifier can be utilised with prompt ``ape" to achieve a more balanced score, sacrificing some recall for improved precision. The three-way classifier achieves a much higher precision than the base model, at increases of 0.41 and 0.49 for chimpanzees and gorillas respectively.
 
 Hence, we propose a method in which classifiers such as the ones designed in this work can be utilised as detachable model heads, chosen depending on use case (Figure~\ref{fig:pipeline}). If high recall is desired, they should be removed. If a balanced model is needed, the two-way classifier is best. Should species-level accuracy be essential, the three-way classifier could be leveraged to filter out many of the incorrect detections produced by the base SAM~3 model.
 
@@ -1193,7 +1213,7 @@ Hence, we propose a method in which classifiers such as the ones designed in thi
 \chapter{Critical Evaluation}
 \label{chap:evaluation}
 
-In this chapter, we interpret the findings for each of the three sections in Chapter~\ref{chap:execution}, and complete a critical evaluation of the methods and limitations. We then discuss to what extent the aims and objectives (\S~\ref{sec:aims}) have been met.
+In this chapter, we interpret the findings for each of the three sections in Chapter~\ref{chap:execution}, and complete a critical evaluation of the methods and limitations.
 
 \section{SAM 3 Detection Performance Evaluation}
 
@@ -1204,6 +1224,8 @@ One of the most consistent patterns, revealed in Section~\ref{sec:execution_init
 The most notable finding is the drastic precision loss concerning species-specific detections. While the high recall is maintained, the prompts ``chimpanzee" and ``gorilla" result in a SAM~3 precision of 0.29 and 0.17 respectively, with SA-FARI achieving 0.38 and 0.18. This is a clear indicator that the model is producing roughly the same set of detections for each prompt, and the higher precision achieved by chimpanzees is caused by the greater number of chimpanzee samples in the dataset. This claim is further supported in Section~\ref{sec:execution_prompt}, where we reveal that the ratio between precision scores in behavioural prompting is roughly equal to the ratio between sample counts. We can deduce that the model is not differentiating between the species in each prompt, but responding to some broader contextual features.
 
 To validate this, we look to SAM~3's text encoder \cite{carion2025sam3segmentconcepts}. The Perception Encoder (PE)~\cite{bolya2025perceptionencoderbestvisual} allows SAM~3 to learn about concepts using a shared semantic space, not by using an exact lookup table. That is, the model can derive meaning from related concepts. It is likely that ``chimpanzee" and ``gorilla" exist in a close semantic space, where their broader great ape features have much more of an impact in the space than their species-specific traits. This is not necessarily a flaw of SAM~3's design, but a limitation of such large-scale VLMs.
+
+Another finding is that SAM~3's tracking performed very poorly. In most cases, it is hard to tell whether this is due to identity consistency between frames, or the high number of incorrect predictions raised by the model.
 
 \subsection{Limitations}
 \label{sec:evalsam3lim}
@@ -1231,7 +1253,7 @@ Another finding is that SAM~3 is somewhat sensitive to prompt formulations. Thou
 
 Finally, Section~\ref{subsec:prompt_formulations} also considers whether prompts containing negatives could be used to improve precision for species-level localisation tasks. For example, the prompt ``chimpanzee" produced a precision of 0.28 on the 20-video subset, equivalent to the precision of prompt ``chimpanzee and not gorilla", again supporting the claim above.
 
-We have shown in a variety of ways that SAM~3 associates prompts with a general semantic space, and is not performing any sort of logical reasoning or interpretation of the prompts. Hence, prompts should be treated as a general identifier, such that deciding the formulation of the prompt should not be an important factor when using the model. Therefore, by showing that there is no clear way to engineer prompting to improve great ape detection with SAM~3, we improve the robustness by designing a classification head, leveraging SAM~3's masklets as input.
+We have shown in a variety of ways that SAM~3 associates prompts with a general semantic space, and is not performing any sort of logical reasoning or interpretation of the prompts. Hence, prompts should be treated as a general identifier, such that deciding the formulation of the prompt should not be an important factor when using the model. Therefore, having shown that there is no clear way to engineer prompting to improve great ape detection with SAM~3, we improve segmentation-classification robustness by designing a classification head, leveraging SAM~3's masklets as input.
 
 \subsection{Limitations}
 
@@ -1249,9 +1271,9 @@ Another limitation, similar to that given in Section~\ref{sec:evalsam3lim}, is t
 
 In Section~\ref{sec:execution_classification2}, we see that fine-tuning a ResNet model outperforms both the baseline model and a small custom CNN (ApeNet), with ResNet achieving a test accuracy of 85\% and ApeNet achieving 67\% (albeit, with a caveat).
 
-Initially, ApeNet's 67\% test accuracy appears to indicate that the model has learned to discriminate between the two species somewhat and achieve decent performance, but inspecting the model's failure cases reveals that this is not the case. Out of $\sim30K$ total predictions, just 73 of these were \texttt{gorilla}. The 67\% accuracy is therefore roughly equivalent to the percentage of chimpanzees in the test set, and the accuracy that would be achieved by a \texttt{for}~loop returning \texttt{chimpanzee} for every frame. So, ApeNet has not learned to differentiate between species, but instead has learned that it will perform fairly well by predicting the majority class nearly every time.
+Initially, ApeNet's 67\% test accuracy appears to indicate that the model has learned to discriminate between the two species somewhat and achieve decent performance, but inspecting the model's failure cases reveals that this is not the case. Out of $\sim30$K total predictions, just 73 of these were \texttt{gorilla}. The 67\% accuracy is therefore roughly equivalent to the percentage of chimpanzees in the test set, and the accuracy that would be achieved by a \texttt{for}~loop returning \texttt{chimpanzee} for every frame. So, ApeNet has not learned to differentiate between species, but instead has learned that it will perform fairly well by predicting the majority class nearly every time.
 
-The fine-tuned ResNet-18 model improves on this model by around 18pp. The first reason for this is that the pretrained ImageNet provides a much stronger initialisation than ApeNet, which has no prior knowledge of any image data. Another, is that the larger architecture and residual connections allow the model to better encode the features of the two visually similar species. Given the visual similarity of the two great ape species, the 18pp increase is higher than expected. This could be down to the design decision of using masks as input to the model, rather than using entire crops featuring background information which the model could be sensitive to.
+The fine-tuned ResNet-18 model improves on the pretrained ImageNet baseline by 18pp. The first reason for this is that the pretrained ImageNet provides a much stronger initialisation than ApeNet, which has no prior knowledge of any image data. Another, is that the larger architecture and residual connections allow the model to better encode the features of the two visually similar species. Given the visual similarity of the two great ape species, the 18pp increase over the pretrained baseline is higher than expected. This could be down to the design decision of using masks as input to the model, rather than using entire crops featuring background information which the model could be sensitive to.
 
 85\% is a decent score for a two-way classifier such as this, especially given the visually similar targets. Other models, such as Snapshot Serengeti~\cite{norouzzadeh2017automaticallyidentifyingcountingdescribing} have proven that greater accuracy is achievable in similar domains. Norouzzadeh et al.~\cite{norouzzadeh2017automaticallyidentifyingcountingdescribing} report a 92.1\% top-1 accuracy, but across 48 distinct species and with 3.2 million images in the training split. The task of chimpanzee versus gorilla in this project is more challenging, due to the smaller dataset size available and the similar visual features shared by each species. Thus, 85\% is decent, but could be improved in some ways which were not explored, such as further parameter tuning and an increased dataset size.
 
@@ -1261,13 +1283,17 @@ The final end-to-end metrics demonstrated that utilising this model as a downstr
 
 The three-way classifier achieved an overall accuracy of roughly 75\% on the test set. This is 10pp lower than the accuracy achieved by the two-way classifier, but this is expected due to the introduction of a third class and the heavy class imbalance.
 
-Though the overall accuracy is lower, the end-to-end precision can be argued to have improved on the two-way classifier, depending on the use case. F1 is still greater than anything achieved by species-specific prompts with SAM~3 alone for both classes, though the chimpanzee F1 is lower than that achieved by the two-way classifier. This is due to an inverse imbalance problem compared to the lone use of SAM~3. We now see precisions of 0.70 and 0.66 for chimpanzees and gorillas respectively, but the recall is $\leq0.50$. Thus, should species accurate detections be required, the three-way classification model would be an ideal downstream classifier, with the two-way model providing a more balanced option.
+Though the overall accuracy is lower, the end-to-end performance can be argued to have improved on the two-way classifier, depending on the use case. F1 is still greater than anything achieved by species-specific prompts with SAM~3 alone for both classes, though the chimpanzee F1 is lower than that achieved by the two-way classifier. This is due to an inverse imbalance problem compared to the lone use of SAM~3. We now see precisions of 0.70 and 0.66 for chimpanzees and gorillas respectively, but the recall is $\leq0.50$. Thus, should species accurate detections be required, the three-way classification model would be an ideal downstream classifier, with the two-way model providing a more balanced option.
+
+The models do not take advantage of tracking information. A voting system by which the model votes for a class based off all instances of an object could have improved accuracy. Alternatively, a 3D residual network, utilising dimensions in height, width and time could have been a good way to take advantage of SAM~3's tracking.
 
 \subsection{Limitations}
 
 The most glaring limitation is in the design of ApeNet. The problem of the model learning to predict the majority class could have been avoided by a number of conventional methods, including using a balanced dataset, initialising weights to discourage predicting \texttt{chimpanzee} somewhat, or a class-weighted cross-entropy loss function. The current setup may make the gain in using fine-tuning over a simple CNN seem higher than it truly is.
 
-Additionally, for both models, the size of the validation set is small. It was difficult to make the test or validation set larger due to the limitation of them having to include only PanAf71 videos to avoid data leakage. Cross validation could have been used to ensure the result is not a result of sampling. It is plausible that a different dataset split could have achieved a different test set accuracy.
+Additionally, for all models, the size of the validation set is small. It was difficult to make the test or validation set larger due to the limitation of them having to include only PanAf71 videos to avoid data leakage. Cross validation could have been used to ensure the result is not a result of sampling. It is plausible that a different dataset split could have achieved a different test set accuracy.
+
+The three-way classifier comes with new limitations in increased class imbalance. One problem in the design of this model, is that the \texttt{not-ape} class is completely determined by SAM~3's failures. Though the \texttt{chimpanzee} and \texttt{gorilla} classes are composed of SAM~3's generated masklets, they are at least verified by ground truth data. The generation of \texttt{not-ape} crops, however, gives us no control on what sort of samples are produced.
 
 % Third, rather than building a model head to be compatible with SAM~3 outputs, fine-tuning the SAM~3 model or restructuring the architecture was considered. This idea was rejected for a number of reasons. Firstly, the architecture is very large and adapting this to our task is outside the scope of the project. Secondly, adapting the model to a task as specific as this would go against what the model was designed for. Also, we have shown that SAM~3 is not highly sensitive to prompts, so it is unclear whether adapting the model for this would even be possible, as it does not appear to be attempting to differentiate between the two classes. Finally, the amount of data required for such a task far exceeds what was available when conducting this work.
 
@@ -1299,15 +1325,17 @@ Before discovering that different prompts could not be used to retrieve any usef
 
 The goal of this project was to consider whether SAM~3, a recent model for prompt-based segmentation, could be adapted to robustly detect great apes in wild camera trap imagery, aiming to tackle a domain in which there is a large gap between the volume of data and the tools to automatically analyse such data. We develop a clear insight into the model's strengths and weaknesses, and propose methods to tackle the weaknesses.
 
-We first demonstrate that, broadly, SAM~3 is an effective ape detector, but is not capable of discriminating between apes at the species-level. Using the PanAf71 set for evaluation, we achieve recall of at least 0.90 with the default weights, and show that SA-FARI weights increase precision at the cost of recall, as intended. However, when using species-specific prompts like ``chimpanzee" or ``gorilla", recall remained high and precision collapsed, with the ratio between precision scores relating to the ratio of each species' sample counts. This indicates that the model produced near identical outputs for either prompt, suggesting that the model's PE forces it to associate each prompt with in a close semantic-space.
+We first demonstrate that, broadly, SAM~3 is an effective ape detector, but is not capable of discriminating between apes at the species-level. Using the PanAf71 set for evaluation, we achieve recall of at least 0.90 with the default weights, and show that SA-FARI weights increase precision at the cost of recall, as intended. However, when using species-specific prompts like ``chimpanzee" or ``gorilla", recall remained high and precision collapsed, with the ratio between precision scores relating to the ratio of each species' sample counts. This indicates that the model produced near identical outputs for either prompt, suggesting that the model's PE forces it to associate each prompt within a close semantic-space.
 
 We reinforced this conclusion in the prompt investigation, by demonstrating that prompt engineering could not be leveraged to yield more desirable outputs. Negatives did not sway the model to avoid a particular object, taxonomy based prompts did not improve recall or precision in any useful way, and behavioural prompts failed to invoke any behaviour-aware segmentation. Together, the results suggest that SAM~3 does not reason about prompts in some logical way, but treats prompts as points in a semantic space. Hence, it is reasonable that ``chimpanzee" and ``gorilla" lie close together in some semantic space, dominated by being apes, such that no wording could pull them apart.
 
-Motivated by the negative result produced by prompt engineering, we instead look to the conventional method of designing CNNs for classification, utilising SAM~3's masks as an under-explored design choice for training. ApeNet produced poor predictive performance, having learned to predict the majority class in over 99\% of its total predictions. This was mainly due to class imbalance and small-scale model architecture. The fine-tuned ResNet-18 model improved on ApeNet's 67\% accuracy by 18pp at roughly 85\%. While this figure is not perfect, it represents improvement over usage of SAM~3 alone, and proposes that implementing such model heads for similar tasks are a viable option when discrimination between multiple objects sharing a similar semantic space is a requirement. The end-to-end performance showed a marginal increase in precision capped by the head's incapability to discard SAM~3's false posities.
+Motivated by the negative result produced by prompt engineering, we instead look to the conventional method of designing CNNs for classification, utilising SAM~3's masks as an under-explored design choice for training. ApeNet produced poor predictive performance, having learned to predict the majority class in over 99\% of its total predictions. This was mainly due to class imbalance and small-scale model architecture. The fine-tuned ResNet-18 model improved on ApeNet's 67\% accuracy by 18pp at roughly 85\%. While this figure is not perfect, it represents improvement over usage of SAM~3 alone, and proposes that implementing such model heads for similar tasks are a viable option when discrimination between multiple objects sharing a similar semantic space is a requirement. The end-to-end performance showed a marginal increase in precision capped by the head's incapability to discard SAM~3's false positives.
 
 A three-way classifier was then trained using the large volume of false positives produced by SAM~3 to add a negative label (\texttt{not-ape}). This achieved a worse overall accuracy on the test set (75\%), but greatly improved species-level precision when evaluated as a full end-to-end pipeline. This resulted in precision $\geq0.66$ for both species, while sacrificing recall.
 
-Hence, we propose a pipeline in which detachable model heads can be designed to adapt SAM~3 to improve species-level detections. While, no model is perfect, with increases in precision sacrificing recall, such heads could be removed or swapped out for different use cases. Where precision is crucial, users could utilise a three way classifier, but if incorrect detections are more acceptable, the two-way classifier improves on SAM~3's precision while maintaining high recall. Should a higher volume of detections be desired, then SAM~3 should be used without a downstream classifier, maximising recall.
+Hence, we propose a pipeline in which detachable model heads can be designed to adapt SAM~3 to improve species-level detections. While, no model is perfect, with increases in precision sacrificing recall, such heads could be removed or swapped out for different use cases. Where precision is crucial, users could utilise a three-way classifier, but if incorrect detections are more acceptable, the two-way classifier improves on SAM~3's precision while maintaining high recall. Should a higher volume of detections be desired, then SAM~3 should be used without a downstream classifier, maximising recall.
+
+Finally, the imperfect classifiers and foundation model highlight that automatic analysis of great ape videos remains an extremely challenging, non-trivial domain. In challenging environments, it can be hard for even humans discern between great ape species.
 
 
 \section{Contributions}
@@ -1334,7 +1362,15 @@ The classifiers built in Chapter~\ref{chap:execution}, particularly ApeNet, leav
 
 An important feature of SAM~3's segmentations was not effectively utilised in the classification models: the temporal domain. Utilising the model's tracking could have improved the classifier's performance. For example, in failure cases in which an ape is cut off by the camera's field of view, it could be that seeing its path throughout the video would give the model greater confidence in its true class. Additionally, the models would be able to effectively utilise movement to determine that the crop was not a stationary object, such as a tree, likely improving three-way classification.
 
-A simple way to conduct this work, would be to take the existing classifiers and employ a voting system, by which the classifier would take all crops and outputs associated with one object, and pick the most common output for this particular object's crops as its final prediction. Another way is to utilise 3D residual networks, which learn features of height, width and time~\cite{hara2017learningspatiotemporalfeatures3d}.
+A simple way to conduct this work, would be to take the existing classifiers and employ a voting system, by which the classifier would take all crops and outputs associated with one object, and pick the most common output for this particular object's crops as its final prediction. Another way is to utilise 3D residual networks, which learn features in dimensions of height, width and time~\cite{hara2017learningspatiotemporalfeatures3d}.
+
+\subsection{SAM~3 Integration with Downstream Classifiers}
+
+This work proposes a pipeline utilising downstream classifiers as SAM~3 model heads, but does not implement this integration. Future work could create a program which allows the user to toggle heads and use SAM~3 combined with a such a model in one command.
+
+\subsection{SAM~3 Tracking Improvement}
+
+The MOTA and IDF1 scores produced by SAM~3 were extremely low. Judging by the high number of false positives raised by the model, this is likely the cause of the low tracking scores, though it could be that the identity consistency is lacking. A further investigation into the route causes could identify useful patterns, motivating work dedicated to improving SAM~3's tracking performance.
 
 \bigskip
 \noindent
@@ -1379,8 +1415,30 @@ The broader takeaway is that SAM~3 is a useful tool for analysing camera trap im
 \chapter{AI Prompts/Tools}
 \label{appx:ai}
 
+\section{Code Creation}
+
+\begin{itemize}
+    \item I used ChatGPT and Claude to generate scripts for intermediate tasks. Examples of such tasks include but is not limited to: counting the number of samples in the ground truth set, saving the crop dataset, and drawing masks over videos. Example prompt: ``generate a Python script which takes the SAM~3 output \texttt{.pt} file and creates a copy of the corresponding video, drawing the masklets over it".
+    \item I used ChatGPT and Claude to help with understanding HPC usage with Slurm and to generate shell scripts for \texttt{sbatch}. Example prompt: ``generate a slrum batch script which runs \texttt{process\_video.py --video\_name <VIDEO\_NAME>} on each video in my \texttt{videos} directory".
+    \item I used ChatGPT and Claude to edit my code to adapt it for updated methods. Example prompt: ``update \texttt{train.py} so that ResNet-18 can be used as a three-way classifier with a \texttt{not-ape} label".
+    \item I used ChatGPT and Claude to assist with debugging. Example prompt: ``attached is my code and the error message produced when trying to run it. how do i fix this".
+    \item I used Claude to create the initial TikZ code for my pipeline diagram. This helped with understanding TikZ, but the diagrams output were not good enough on their own without manual editing. Example prompt: ``can you create the pipeline diagram in TikZ".
+    \item I used Claude to identify typos and grammatical errors in my work. Example prompt: ``read the attached dissertation carefully, identifying any typos or grammatical errors".
+
+\end{itemize}
 
 
+\section{Understanding Concepts}
+
+\begin{itemize}
+    \item I used ChatGPT for help understanding deep learning concepts. Example prompt ``provide an easy-to-understand explanation of how ResNet's shortcut connections work".
+    \item I used ChatGPT for help understanding tracking metrics. Example prompt ``what's the difference between MOTA and IDF1".
+\end{itemize}
+
+
+\section{Other Tools}
+
+I also used other AI tools that didn't require prompting. This includes Overleaf's AI spelling and grammar checker, and automated code completions in Visual Studio Code.
 
 
 

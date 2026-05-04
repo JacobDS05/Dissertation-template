@@ -1,0 +1,35 @@
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[
+        node distance=0.8cm,
+        every node/.style={font=\small},
+        stage/.style={
+            rectangle,
+            rounded corners=3pt,
+            draw=black,
+            thick,
+            minimum width=11cm,
+            minimum height=1.3cm,
+            align=center,
+            font=\normalsize\bfseries,
+        },
+        s1/.style={stage, fill=blue!12},
+        s2/.style={stage, fill=purple!12},
+        s3/.style={stage, fill=orange!15},
+        s4/.style={stage, fill=green!15},
+        arrow/.style={-{Stealth[length=3mm]}, very thick},
+    ]
+
+    \node[s1] (s1) {Characterise SAM~3 performance for great ape detection};
+    \node[s2, below=of s1] (s2) {Investigate prompt engineering};
+    \node[s3, below=of s2] (s3) {Design downstream classifiers};
+    \node[s4, below=of s3] (s4) {Propose a segment-then-classify pipeline\\with detachable heads};
+
+    \draw[arrow] (s1) -- (s2);
+    \draw[arrow] (s2) -- (s3);
+    \draw[arrow] (s3) -- (s4);
+
+    \end{tikzpicture}
+    \caption[Thesis Overview]{Overview of the project. Each stage is motivated by the findings of the previous one: SAM~3's poor species-level precision motivates the prompt engineering investigation; the negative result of that investigation motivates downstream classifier design; the precision-recall trade-off between classifiers motivates the proposed pipeline of detachable heads.}
+    \label{fig:overview}
+\end{figure}
